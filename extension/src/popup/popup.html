@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Opportunity Scanner</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <img src="../../icons/icon48.png" alt="" width="28" height="28" />
+        </div>
+        <div class="topbar-actions">
+          <button id="scanBtn" class="btn btn-primary" title="Run a new scan">Scan Now</button>
+          <button id="exportBtn" class="btn btn-ghost" title="Export filtered results to CSV">Export</button>
+        </div>
+      </header>
+
+      <section id="stats" class="stats-bar">
+        <button id="statTotal" class="stat" data-filter="all" title="Click to show all opportunities">0 total</button>
+        <button id="statNew" class="stat highlight" data-filter="new" title="Click to show only unreviewed opportunities">0 new</button>
+        <button id="statSaved" class="stat" data-filter="saved" title="Click to show only saved/bookmarked opportunities">0 saved</button>
+      </section>
+
+      <section id="meta" class="meta-bar" title="Shows when the last scan ran, how many items were found, and any errors">Ready</section>
+      <details id="logDetails" class="log-details" style="display:none">
+        <summary title="Expand to see detailed scan progress — which sources succeeded, failed, or returned 0 items">Scan Log</summary>
+        <pre id="scanLog" class="scan-log"></pre>
+      </details>
+
+      <section class="controls">
+        <label title="Filter results by opportunity category — auto-detected from each listing's title and description">
+          Type
+          <select id="typeFilter">
+            <option value="all">All Types</option>
+            <option value="tender">Tender / RFP</option>
+            <option value="project">Project</option>
+            <option value="training">Training</option>
+            <option value="consultancy">Consultancy</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label title="Filter by review status — New means unreviewed, Saved means bookmarked, Dismissed means hidden">
+          Status
+          <select id="statusFilter">
+            <option value="all">All Status</option>
+            <option value="new">New</option>
+            <option value="saved">Saved</option>
+            <option value="dismissed">Dismissed</option>
+          </select>
+        </label>
+        <label title="Drag to hide low-relevance results. Score is 0-100 based on keyword matches, geography, and recency. Set to 0 to see everything.">
+          Min Score
+          <input id="minScore" type="range" min="0" max="100" value="0" step="5" />
+          <span id="minScoreValue" class="range-value">0</span>
+        </label>
+      </section>
+
+      <section id="resultCount" class="result-count"></section>
+      <section id="results" class="results">
+        <div class="empty-state">
+          <p>No opportunities yet. Click <strong>Scan Now</strong> to start.</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <a href="#" id="openOptions">Settings</a>
+        <span class="version">v3.2.1</span>
+      </footer>
+    </main>
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
