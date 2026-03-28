@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Opportunity Scanner",
-  "version": "3.2.1",
+  "version": "4.0.0",
   "description": "Discover tenders, RFPs, RFQs, projects, trainings, and consultancy opportunities in Afghanistan from UN agencies, ACBAR, World Bank, and more.",
   "action": {
     "default_popup": "src/popup/popup.html",

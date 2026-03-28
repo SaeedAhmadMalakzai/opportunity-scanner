@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,95 +14,104 @@
           <h1>Opportunity Scanner</h1>
           <p class="subtitle">Settings &amp; Configuration</p>
         </div>
+        <button id="themeToggle" class="theme-btn" title="Toggle light/dark theme">&#9788;</button>
       </header>
 
       <section class="section">
-        <h2 title="Core settings that control how scans behave and what gets shown">Scan Configuration</h2>
+        <h2>Scan Configuration</h2>
         <div class="grid">
-          <label title="Only results with a relevance score at or above this number will appear in the popup. Set to 0 to see everything.">
+          <label title="Only results with a relevance score at or above this number will appear.">
             Minimum Score Threshold
-            <input id="minScore" type="number" min="0" max="100" title="0 = show all results. 20 = only items with some keyword match. 60+ = strong matches only." />
+            <input id="minScore" type="number" min="0" max="100" />
             <span class="hint">Results below this score are hidden (0-100)</span>
           </label>
-          <label title="The extension runs scans automatically in the background at this interval.">
+          <label title="The extension runs scans automatically at this interval.">
             Scan Interval (hours)
-            <input id="scanIntervalHours" type="number" min="1" max="48" title="e.g. 12 = scans twice a day. 1 = scans every hour (uses more battery)." />
+            <input id="scanIntervalHours" type="number" min="1" max="48" />
             <span class="hint">How often automatic scans run</span>
           </label>
-          <label title="When an opportunity scores at or above this number, you'll get a desktop notification.">
+          <label title="Desktop notification for scores at or above this.">
             High Priority Alert Threshold
-            <input id="highPriorityThreshold" type="number" min="50" max="100" title="80 = notified for strong matches. 50 = notified more often." />
+            <input id="highPriorityThreshold" type="number" min="50" max="100" />
             <span class="hint">Notification for scores at or above this</span>
           </label>
         </div>
       </section>
 
       <section class="section">
-        <h2 title="Locations that boost an opportunity's relevance score (+10 points per match).">Target Geographies</h2>
-        <label title="Comma-separated list of country names, cities, or provinces.">
+        <h2>Target Geographies</h2>
+        <label title="Comma-separated list of locations that boost score (+10 points).">
           Regions (comma separated)
-          <input id="targetGeographies" type="text" placeholder="afghanistan, kabul, herat" title="e.g. afghanistan, kabul, herat, mazar, kandahar, south asia" />
+          <input id="targetGeographies" type="text" placeholder="afghanistan, kabul, herat" />
           <span class="hint">Opportunities matching these locations get a score boost</span>
         </label>
       </section>
 
       <section class="section">
-        <h2 title="Each source is a website the extension fetches data from. Uncheck to skip during scans.">Enabled Sources</h2>
-        <p class="hint" style="margin-bottom: 8px">Select which connectors to use. These fetch data directly from UN agencies, ACBAR, World Bank, and more.</p>
+        <h2>Enabled Sources</h2>
+        <p class="hint" style="margin-bottom: 8px">Select which connectors to use during scans.</p>
         <div id="sources" class="sources-grid"></div>
       </section>
 
       <section class="section">
-        <h2 title="Add your own keywords to boost scoring (+15 per match).">Custom Keywords</h2>
-        <label title="One keyword or phrase per line.">
+        <h2>Source Health</h2>
+        <p class="hint" style="margin-bottom: 8px">Status from the most recent scan. Shows response time, item count, and errors per source.</p>
+        <div id="sourceHealth" class="health-grid">
+          <p class="hint">No scan data yet. Run a scan first.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Custom Keywords</h2>
+        <label title="One keyword or phrase per line. Each match adds +15 to score.">
           Additional keywords (one per line)
-          <textarea id="customKeywords" rows="5" placeholder="donor coordination&#10;gender mainstreaming&#10;climate resilience" title="Examples: WASH, livelihood, gender mainstreaming"></textarea>
+          <textarea id="customKeywords" rows="5" placeholder="donor coordination&#10;gender mainstreaming&#10;climate resilience"></textarea>
           <span class="hint">These keywords boost matching score when found in opportunities</span>
         </label>
       </section>
 
       <section class="section">
-        <h2 title="Paste direct URLs to specific tender, project, or training pages.">Manual Links to Scan</h2>
+        <h2>Manual Links to Scan</h2>
         <label title="One URL per line. Each page is fetched, parsed, and scored.">
           Opportunity page URLs (one per line)
-          <textarea id="manualLinks" rows="5" placeholder="https://example.org/tender/12345&#10;https://reliefweb.int/job/12345"></textarea>
+          <textarea id="manualLinks" rows="5" placeholder="https://example.org/tender/12345"></textarea>
           <span class="hint">Direct links to individual tender/project/training pages</span>
         </label>
       </section>
 
       <section class="section">
-        <h2 title="Listing pages that contain multiple opportunities. All links are extracted.">Custom Source URLs</h2>
-        <label title="One URL per line. These are crawled for links.">
+        <h2>Custom Source URLs</h2>
+        <label title="One URL per line. All links are extracted from each page.">
           Additional listing page URLs (one per line)
-          <textarea id="customSourceUrls" rows="4" placeholder="https://npa.gov.af/tenders&#10;https://example.org/opportunities"></textarea>
+          <textarea id="customSourceUrls" rows="4" placeholder="https://npa.gov.af/tenders"></textarea>
           <span class="hint">These pages will be crawled for links alongside the built-in connectors</span>
         </label>
       </section>
 
       <section class="section">
-        <h2 title="Control network speed and resource usage.">Performance</h2>
+        <h2>Performance</h2>
         <div class="grid">
-          <label title="How long to wait for a website to respond before giving up (milliseconds).">
+          <label title="Max wait per network request (ms).">
             Fetch Timeout (ms)
-            <input id="fetchTimeoutMs" type="number" min="3000" max="30000" step="1000" title="25000 = 25 seconds. Increase if you see timeout errors." />
+            <input id="fetchTimeoutMs" type="number" min="3000" max="30000" step="1000" />
             <span class="hint">Max wait per network request</span>
           </label>
-          <label title="How many websites to fetch in parallel. Lower = less memory.">
+          <label title="How many websites to fetch in parallel.">
             Max Concurrent Fetches
-            <input id="maxConcurrentFetches" type="number" min="1" max="10" title="3 = safe default. 1 = slowest. 10 = fastest but heavy." />
+            <input id="maxConcurrentFetches" type="number" min="1" max="10" />
             <span class="hint">Parallel network request limit</span>
           </label>
         </div>
       </section>
 
       <div class="actions">
-        <button id="saveBtn" class="btn btn-primary" title="Save all settings — takes effect on next scan">Save Settings</button>
-        <button id="clearBtn" class="btn btn-danger" title="Delete all stored opportunities and scan history. Settings are kept.">Clear All Data</button>
+        <button id="saveBtn" class="btn btn-primary">Save Settings</button>
+        <button id="clearBtn" class="btn btn-danger">Clear All Data</button>
       </div>
       <div id="msg" class="msg"></div>
 
       <footer class="options-footer">
-        <span>Opportunity Scanner v3.2.1</span>
+        <span>Opportunity Scanner v4.0.0</span>
       </footer>
     </div>
     <script type="module" src="./options.js"></script>

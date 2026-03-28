@@ -3,12 +3,15 @@ import { scoreOpportunity } from "../lib/matcher.js";
 import {
   getSettings, getSeenUrls, markUrlsSeen, setScanState,
   getOpportunitiesMap, getOpportunitiesCount, upsertOpportunities,
-  updateOpportunityStatus, getScanState, clearAllData
+  updateOpportunityStatus, updateOpportunityNote, bulkUpdateStatus,
+  getScanState, clearAllData, setSourceHealth, getSourceHealth
 } from "../lib/storage.js";
 import { parseOpportunityPage, parseHtmlListingPage } from "../lib/parsers.js";
 import { ITEM_STATUS, APP_NAME } from "../lib/types.js";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+let scanAborted = false;
 
 function hashString(v) {
   let h = 0;
@@ -49,15 +52,14 @@ function cleanUrl(raw) {
 function isExpired(deadline) {
   if (!deadline) return false;
   const d = Date.parse(String(deadline));
-  if (Number.isNaN(d)) return false;
-  return d < Date.now();
+  return !Number.isNaN(d) && d < Date.now();
 }
 
 async function fetchText(url, timeout = 25000) {
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), timeout);
   try {
-    const r = await fetch(url, { signal: c.signal, headers: { "User-Agent": UA, "Accept": "text/html,application/xhtml+xml,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9" } });
+    const r = await fetch(url, { signal: c.signal, headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9" } });
     if (!r.ok) throw new Error(`HTTP ${r.status} from ${new URL(url).hostname}`);
     return await r.text();
   } finally { clearTimeout(t); }
@@ -67,7 +69,7 @@ async function fetchJson(url, timeout = 25000) {
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), timeout);
   try {
-    const r = await fetch(url, { signal: c.signal, headers: { "User-Agent": UA, "Accept": "application/json" } });
+    const r = await fetch(url, { signal: c.signal, headers: { "User-Agent": UA, Accept: "application/json" } });
     if (!r.ok) throw new Error(`HTTP ${r.status} from ${new URL(url).hostname}`);
     return await r.json();
   } finally { clearTimeout(t); }
@@ -76,10 +78,15 @@ async function fetchJson(url, timeout = 25000) {
 const scanLog = [];
 function log(msg) { scanLog.push(`[${new Date().toISOString().slice(11, 19)}] ${msg}`); }
 
+function broadcast(data) {
+  try { chrome.runtime.sendMessage(data); } catch {}
+}
+
 async function pooled(items, fn, n = 3) {
   let i = 0;
   async function w() {
     while (i < items.length) {
+      if (scanAborted) return;
       const j = i++;
       try { await fn(items[j]); }
       catch (e) {
@@ -93,6 +100,7 @@ async function pooled(items, fn, n = 3) {
 }
 
 async function runScan() {
+  scanAborted = false;
   scanLog.length = 0;
   log("Scan started");
   const settings = await getSettings();
@@ -106,35 +114,60 @@ async function runScan() {
     fetchJson: (u) => fetchJson(u, tm)
   };
 
+  broadcast({ type: "SCAN_PROGRESS", data: { done: 0, total: 0, phase: "connectors", source: "", items: 0 } });
+
   let apiItems = [];
-  try { apiItems = await fetchAllConnectorItems(ctx); log(`Total API items: ${apiItems.length}`); }
-  catch (e) { log(`Connectors error: ${e.message}`); }
+  let healthData = {};
+  try {
+    const result = await fetchAllConnectorItems(ctx, {
+      onProgress(p) {
+        broadcast({ type: "SCAN_PROGRESS", data: { ...p, log: scanLog.join("\n") } });
+      },
+      shouldAbort() { return scanAborted; }
+    });
+    apiItems = result.items;
+    healthData = result.health;
+    log(`Total API items: ${apiItems.length}`);
+  } catch (e) { log(`Connectors error: ${e.message}`); }
 
-  const customUrls = (settings.customSourceUrls || []).map(cleanUrl).filter((u) => u.startsWith("http"));
-  const customItems = [];
-  if (customUrls.length) {
-    log(`Custom source pages: ${customUrls.length}`);
-    await pooled(customUrls, async (url) => {
-      const html = await ctx.fetchText(url);
-      customItems.push(...parseHtmlListingPage(html, url, new URL(url).hostname, "other"));
-    }, cc);
-    log(`Custom source items: ${customItems.length}`);
+  await setSourceHealth(healthData);
+
+  if (scanAborted) {
+    log("Scan stopped by user — saving partial results");
+    broadcast({ type: "SCAN_PROGRESS", data: { phase: "stopped", items: apiItems.length } });
   }
 
-  const manualLinks = (settings.manualLinks || []).map(cleanUrl).filter((u) => u.startsWith("http"));
-  const manualItems = [];
-  if (manualLinks.length) {
-    log(`Manual links: ${manualLinks.length}`);
-    await pooled(manualLinks, async (url) => {
-      const html = await ctx.fetchText(url);
-      manualItems.push(parseOpportunityPage(html, url));
-    }, cc);
-    log(`Manual items parsed: ${manualItems.length}`);
+  if (!scanAborted) {
+    broadcast({ type: "SCAN_PROGRESS", data: { phase: "custom-sources" } });
+    const customUrls = (settings.customSourceUrls || []).map(cleanUrl).filter((u) => u.startsWith("http"));
+    const customItems = [];
+    if (customUrls.length) {
+      log(`Custom source pages: ${customUrls.length}`);
+      await pooled(customUrls, async (url) => {
+        const html = await ctx.fetchText(url);
+        customItems.push(...parseHtmlListingPage(html, url, new URL(url).hostname, "other"));
+      }, cc);
+      log(`Custom source items: ${customItems.length}`);
+    }
+
+    const manualLinks = (settings.manualLinks || []).map(cleanUrl).filter((u) => u.startsWith("http"));
+    const manualItems = [];
+    if (manualLinks.length) {
+      broadcast({ type: "SCAN_PROGRESS", data: { phase: "manual-links" } });
+      log(`Manual links: ${manualLinks.length}`);
+      await pooled(manualLinks, async (url) => {
+        const html = await ctx.fetchText(url);
+        manualItems.push(parseOpportunityPage(html, url));
+      }, cc);
+      log(`Manual items parsed: ${manualItems.length}`);
+    }
+    apiItems.push(...customItems, ...manualItems);
   }
 
-  const allRaw = [...apiItems, ...customItems, ...manualItems];
+  const allRaw = apiItems;
   log(`Total raw items: ${allRaw.length}`);
 
+  broadcast({ type: "SCAN_PROGRESS", data: { phase: "scoring", items: allRaw.length } });
   const result = [];
   let expiredCount = 0;
   for (const item of allRaw) {
@@ -150,9 +183,11 @@ async function runScan() {
     }
   }
 
+  broadcast({ type: "SCAN_PROGRESS", data: { phase: "filtering" } });
   log(`Expired (skipped): ${expiredCount}`);
-  log(`Items stored: ${result.length}`);
+  log(`Items passing score threshold: ${result.length}`);
 
+  broadcast({ type: "SCAN_PROGRESS", data: { phase: "clustering" } });
   assignClusters(result);
   await upsertOpportunities(result);
   await markUrlsSeen(result.map((p) => p.canonicalUrl));
@@ -170,6 +205,7 @@ async function runScan() {
   }
 
   log("Scan complete");
+  broadcast({ type: "SCAN_PROGRESS", data: { phase: "complete", items: result.length } });
   const prev = await getScanState();
   await setScanState({
     isRunning: false, lastScanAt: new Date().toISOString(), lastError: null,
@@ -181,12 +217,13 @@ async function runScan() {
 function csvEsc(v) { const s = v == null ? "" : String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
 
 function toCsv(items) {
-  const h = ["id","title","type","score","status","organization","location","deadline","postedDate","sourceDomain","url","matchedKeywords","summary"];
+  const h = ["id","title","type","score","status","organization","location","deadline","postedDate","sourceDomain","url","matchedKeywords","matchedCustomKeywords","notes","summary"];
   const rows = [h.join(",")];
   for (const it of items) {
     rows.push([it.id, it.title, it.type, it.score, it.status, it.organization, it.location,
       it.deadline, it.postedDate, it.sourceDomain, it.url,
-      (it.matchedKeywords||[]).join("; "), it.summary].map(csvEsc).join(","));
+      (it.matchedKeywords||[]).join("; "), (it.matchedCustomKeywords||[]).join("; "),
+      it.notes || "", it.summary].map(csvEsc).join(","));
   }
   return rows.join("\r\n");
 }
@@ -196,11 +233,39 @@ async function getFiltered(p = {}) {
   const min = Number(p.minScore ?? 0);
   const tf = p.typeFilter || "all";
   const sf = p.statusFilter || "all";
-  return all
+  const kf = p.keywordFilter || "all";
+  const sq = (p.searchQuery || "").toLowerCase().trim();
+  const sort = p.sortBy || "score";
+
+  let filtered = all
     .filter((it) => it.score >= min)
     .filter((it) => tf === "all" || it.type === tf)
     .filter((it) => sf === "all" || it.status === sf)
-    .sort((a, b) => (b.score || 0) - (a.score || 0));
+    .filter((it) => kf === "all" || (it.matchedKeywords || []).includes(kf))
+    .filter((it) => !sq || (it.title || "").toLowerCase().includes(sq) || (it.summary || "").toLowerCase().includes(sq) || (it.organization || "").toLowerCase().includes(sq));
+
+  switch (sort) {
+    case "deadline":
+      filtered.sort((a, b) => {
+        const da = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+        const db = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+        return da - db;
+      });
+      break;
+    case "date":
+      filtered.sort((a, b) => {
+        const da = a.firstSeenAt ? new Date(a.firstSeenAt).getTime() : 0;
+        const db = b.firstSeenAt ? new Date(b.firstSeenAt).getTime() : 0;
+        return db - da;
+      });
+      break;
+    case "source":
+      filtered.sort((a, b) => (a.sourceDomain || "").localeCompare(b.sourceDomain || ""));
+      break;
+    default:
+      filtered.sort((a, b) => (b.score || 0) - (a.score || 0));
+  }
+  return filtered;
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -228,6 +293,10 @@ chrome.runtime.onMessage.addListener((msg, _s, send) => {
           runScan().catch(async (e) => { await setScanState({ isRunning: false, lastError: String(e), lastLog: scanLog.join("\n") }); });
           send({ ok: true, data: { started: true } }); return;
         }
+        case "STOP_SCAN": {
+          scanAborted = true;
+          send({ ok: true }); return;
+        }
         case "GET_RESULTS": send({ ok: true, data: await getFiltered(msg.payload) }); return;
         case "GET_CONNECTORS": send({ ok: true, data: getConnectorCatalog() }); return;
         case "GET_SCAN_STATE": send({ ok: true, data: await getScanState() }); return;
@@ -235,6 +304,9 @@ chrome.runtime.onMessage.addListener((msg, _s, send) => {
         case "EXPORT_CSV": send({ ok: true, data: toCsv(await getFiltered(msg.payload || {})) }); return;
         case "SAVE_ITEM": await updateOpportunityStatus(msg.payload.id, ITEM_STATUS.SAVED); send({ ok: true }); return;
         case "DISMISS_ITEM": await updateOpportunityStatus(msg.payload.id, ITEM_STATUS.DISMISSED); send({ ok: true }); return;
+        case "SAVE_NOTE": await updateOpportunityNote(msg.payload.id, msg.payload.notes); send({ ok: true }); return;
+        case "BULK_UPDATE": await bulkUpdateStatus(msg.payload.ids, msg.payload.status); send({ ok: true }); return;
+        case "GET_SOURCE_HEALTH": send({ ok: true, data: await getSourceHealth() }); return;
         case "CLEAR_DATA": await clearAllData(); send({ ok: true }); return;
         default: send({ ok: false, error: "Unknown message type." });
       }

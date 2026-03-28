@@ -541,20 +541,34 @@ export function getConnectorCatalog() {
   return Object.entries(CONNECTORS).map(([id, c]) => ({ id, label: c.label }));
 }
 
-export async function fetchAllConnectorItems(ctx) {
+export async function fetchAllConnectorItems(ctx, { onProgress, shouldAbort } = {}) {
   const enabled = ctx.settings.enabledSources || [];
   ctx.log(`Enabled sources: ${enabled.join(", ") || "(none)"}`);
+  const total = enabled.length;
+  let done = 0;
+  const health = {};
   const all = [];
   for (const id of enabled) {
+    if (shouldAbort?.()) { ctx.log("Scan aborted by user"); break; }
     const c = CONNECTORS[id];
-    if (!c) { ctx.log(`SKIP unknown: ${id}`); continue; }
+    if (!c) { ctx.log(`SKIP unknown: ${id}`); done++; continue; }
+    onProgress?.({ sourceId: id, source: c.label, done, total, phase: "fetching" });
+    const t0 = Date.now();
     try {
       const items = await c.fetchItems(ctx);
-      ctx.log(`${c.label}: ${items.length} items`);
+      const ms = Date.now() - t0;
+      ctx.log(`${c.label}: ${items.length} items (${ms}ms)`);
       all.push(...items);
+      health[id] = { status: "ok", count: items.length, ms, at: new Date().toISOString(), error: null };
     } catch (err) {
-      ctx.log(`${c.label}: ERROR - ${err.message}`);
+      const ms = Date.now() - t0;
+      const isTimeout = ms >= (ctx.settings.fetchTimeoutMs || 25000) - 500;
+      const isSlow = ms > 10000;
+      ctx.log(`${c.label}: ERROR - ${err.message} (${ms}ms)`);
+      health[id] = { status: "error", count: 0, ms, at: new Date().toISOString(), error: err.message, isTimeout, isSlow };
     }
+    done++;
+    onProgress?.({ sourceId: id, source: c.label, done, total, phase: "fetching", items: all.length });
   }
-  return all;
+  return { items: all, health };
 }

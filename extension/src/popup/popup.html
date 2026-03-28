@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,9 +10,11 @@
     <main class="app">
       <header class="topbar">
         <div class="brand">
-          <img src="../../icons/icon48.png" alt="" width="28" height="28" />
+          <img src="../../icons/icon48.png" alt="" width="24" height="24" />
         </div>
         <div class="topbar-actions">
+          <button id="themeToggle" class="icon-btn" title="Toggle light/dark theme">&#9788;</button>
+          <button id="viewToggle" class="icon-btn" title="Toggle compact/comfortable view">&#9783;</button>
           <button id="scanBtn" class="btn btn-primary" title="Run a new scan">Scan Now</button>
           <button id="exportBtn" class="btn btn-ghost" title="Export filtered results to CSV">Export</button>
         </div>
@@ -24,51 +26,102 @@
         <button id="statSaved" class="stat" data-filter="saved" title="Click to show only saved/bookmarked opportunities">0 saved</button>
       </section>
 
-      <section id="meta" class="meta-bar" title="Shows when the last scan ran, how many items were found, and any errors">Ready</section>
+      <div id="networkBanner" class="network-banner" style="display:none">
+        <span id="networkMsg">Network offline</span>
+      </div>
+
+      <section id="meta" class="meta-bar" title="Shows scan progress, last scan time, and any errors">Ready</section>
       <details id="logDetails" class="log-details" style="display:none">
-        <summary title="Expand to see detailed scan progress — which sources succeeded, failed, or returned 0 items">Scan Log</summary>
+        <summary title="Expand to see detailed scan progress">Scan Log</summary>
         <pre id="scanLog" class="scan-log"></pre>
       </details>
 
       <section class="controls">
-        <label title="Filter results by opportunity category — auto-detected from each listing's title and description">
-          Type
-          <select id="typeFilter">
-            <option value="all">All Types</option>
-            <option value="tender">Tender / RFP</option>
-            <option value="project">Project</option>
-            <option value="training">Training</option>
-            <option value="consultancy">Consultancy</option>
-            <option value="other">Other</option>
-          </select>
-        </label>
-        <label title="Filter by review status — New means unreviewed, Saved means bookmarked, Dismissed means hidden">
-          Status
-          <select id="statusFilter">
-            <option value="all">All Status</option>
-            <option value="new">New</option>
-            <option value="saved">Saved</option>
-            <option value="dismissed">Dismissed</option>
-          </select>
-        </label>
-        <label title="Drag to hide low-relevance results. Score is 0-100 based on keyword matches, geography, and recency. Set to 0 to see everything.">
-          Min Score
-          <input id="minScore" type="range" min="0" max="100" value="0" step="5" />
-          <span id="minScoreValue" class="range-value">0</span>
-        </label>
+        <div class="search-row">
+          <input type="text" id="searchBox" class="search-input" placeholder="Search results..." title="Filter visible results by title, summary, or organization" />
+        </div>
+        <div class="filter-row">
+          <label title="Filter by opportunity category">
+            Type
+            <select id="typeFilter">
+              <option value="all">All Types</option>
+              <option value="tender">Tender / RFP</option>
+              <option value="project">Project</option>
+              <option value="training">Training</option>
+              <option value="consultancy">Consultancy</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label title="Filter by review status">
+            Status
+            <select id="statusFilter">
+              <option value="all">All Status</option>
+              <option value="new">New</option>
+              <option value="saved">Saved</option>
+              <option value="dismissed">Dismissed</option>
+            </select>
+          </label>
+          <label title="Filter by matched keyword">
+            Keyword
+            <select id="keywordFilter">
+              <option value="all">All Keywords</option>
+            </select>
+          </label>
+        </div>
+        <div class="score-sort-row">
+          <label title="Hide results below this relevance score">
+            Min Score
+            <input id="minScore" type="range" min="0" max="100" value="0" step="5" />
+            <span id="minScoreValue" class="range-value">0</span>
+          </label>
+          <label title="Change result ordering">
+            Sort
+            <select id="sortBy">
+              <option value="score">Score (high first)</option>
+              <option value="deadline">Deadline (soonest)</option>
+              <option value="date">Date found (newest)</option>
+              <option value="source">Source (A-Z)</option>
+            </select>
+          </label>
+        </div>
       </section>
 
-      <section id="resultCount" class="result-count"></section>
-      <section id="results" class="results">
-        <div class="empty-state">
-          <p>No opportunities yet. Click <strong>Scan Now</strong> to start.</p>
+      <section class="result-header">
+        <label class="select-all-label" title="Select or deselect all visible items">
+          <input type="checkbox" id="selectAll" />
+          <span id="resultCount">0 results</span>
+        </label>
+        <div id="bulkBar" class="bulk-bar" style="display:none">
+          <button id="bulkSave" class="btn btn-sm btn-save" title="Save all selected items">Save</button>
+          <button id="bulkDismiss" class="btn btn-sm btn-dismiss" title="Dismiss all selected items">Dismiss</button>
+        </div>
+      </section>
+
+      <section id="results" class="results" data-view="comfortable">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">&#128269;</div>
+          <p>No opportunities yet</p>
+          <p class="empty-hint">Click <strong>Scan Now</strong> to fetch from all enabled sources.</p>
+          <p class="empty-hint">Tip: Add custom keywords in <strong>Settings</strong> to improve relevance.</p>
         </div>
       </section>
 
       <footer class="footer">
         <a href="#" id="openOptions">Settings</a>
-        <span class="version">v3.2.1</span>
+        <span class="version">v4.0.0</span>
       </footer>
+
+      <div id="onboarding" class="onboarding-overlay" style="display:none">
+        <div class="onboarding-box">
+          <h2>Welcome to Opportunity Scanner</h2>
+          <ol>
+            <li>Click <strong>Scan Now</strong> to fetch opportunities from 20 sources</li>
+            <li>Use <strong>filters</strong> and <strong>search</strong> to narrow results</li>
+            <li>Open <strong>Settings</strong> to customize sources, keywords, and schedule</li>
+          </ol>
+          <button id="dismissOnboarding" class="btn btn-primary">Got it</button>
+        </div>
+      </div>
     </main>
     <script type="module" src="./popup.js"></script>
   </body>
