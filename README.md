@@ -34,10 +34,20 @@ This repository is the extension source only. Load the `extension` folder via **
 | ActionAid Afghanistan | Vacancies, consultancies and tenders from the country office | HTML |
 | ReliefWeb — jobs | Jobs and consultancies filtered to Afghanistan | Official API, needs a free appname |
 | ReliefWeb — training | Training opportunities filtered to Afghanistan | Official API, needs a free appname |
+| UNAMA — expressions of interest | Current EOIs from the UN Assistance Mission in Afghanistan | HTML table |
+| UNDP Afghanistan — projects | Country programme projects (UNDP tenders are on UNGM) | HTML |
+| Afghan ministries (9) | Official tender notices from MoI, MoE, MEW, MoPW, MoMP, MCIT, MoEc, MoLSA and MoHIA | HTML, one shared parser; Solar Hijri dates converted |
 
 ReliefWeb requires a pre-approved `appname` for API access since November 2025. Request one at <https://apidoc.reliefweb.int/parameters#appname>, paste it into **Settings → Sources**, and both ReliefWeb sources start working.
 
 You can also add your own listing pages to crawl and individual notice pages to parse under **Settings → Your own sources**. Chrome asks once for permission to read each new site.
+
+### Sources that were checked and cannot be scraped
+
+- **AGEOPS** (tenders.ageops.af): a login-only Angular app with no public API.
+- **UNICEF Afghanistan** and **dgMarket**: Cloudflare browser challenge blocks background fetches.
+- **UNDP Afghanistan procurement** and **FAO procurement**: information pages without a notice list; both publish on UNGM, which is covered.
+- **Ministry of Finance** and **Ministry of Defence**: expired or broken TLS certificates, so Chrome refuses the connection.
 
 ### Why some old sources were removed
 

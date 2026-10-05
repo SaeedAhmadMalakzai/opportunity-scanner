@@ -11,7 +11,7 @@ Tenders, RFPs, consultancies and trainings in Afghanistan from ACBAR, UNGM, Worl
 Opportunity Scanner is a smart opportunity discovery tool built for consulting and development firms operating in Afghanistan.
 
 **What it does:**
-- Scans ACBAR (RFPs, RFQs, jobs), the UN Global Marketplace (every UN agency), the World Bank procurement and projects APIs, Afghan Tenders, ACTED, ActionAid Afghanistan and ReliefWeb
+- Scans ACBAR (RFPs, RFQs, jobs), the UN Global Marketplace (every UN agency), the World Bank procurement and projects APIs, Afghan Tenders, ACTED, ActionAid Afghanistan, UNAMA, UNDP, nine Afghan ministry tender boards and ReliefWeb
 - Extracts titles, deadlines, organizations, and summaries from each listing
 - Scores every result against your company profile using weighted keyword matching
 - Filters out expired deadlines automatically

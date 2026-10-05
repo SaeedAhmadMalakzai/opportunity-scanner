@@ -30,3 +30,24 @@ test("daysUntil and ageInDays", () => {
   assert.equal(daysUntil(null, now), null);
   assert.equal(ageInDays("2026-10-03T00:00:00Z", now), 2);
 });
+
+import { asciiDigits, jalaliToGregorian, normalizeJalaliDate, normalizeAnyDate } from "../extension/src/lib/dates.js";
+
+test("asciiDigits converts Persian and Arabic-Indic digits", () => {
+  assert.equal(asciiDigits("۱۴۰۵/۷/۱۳ - ۱۱:۲۸"), "1405/7/13 - 11:28");
+  assert.equal(asciiDigits("٢٠٢٦"), "2026");
+});
+
+test("jalaliToGregorian matches known conversions", () => {
+  assert.deepEqual(jalaliToGregorian(1405, 1, 1), { gy: 2026, gm: 3, gd: 21 });
+  assert.deepEqual(jalaliToGregorian(1404, 12, 29), { gy: 2026, gm: 3, gd: 20 });
+  assert.deepEqual(jalaliToGregorian(1403, 1, 1), { gy: 2024, gm: 3, gd: 20 });
+  assert.deepEqual(jalaliToGregorian(1405, 7, 13), { gy: 2026, gm: 10, gd: 5 });
+});
+
+test("normalizeJalaliDate / normalizeAnyDate", () => {
+  assert.equal(normalizeJalaliDate("دوشنبه ۱۴۰۵/۷/۱۳ - ۱۱:۲۸"), "2026-10-05T00:00:00.000Z");
+  assert.equal(normalizeJalaliDate("Sun, Oct 04 2026 9:34 AM"), null);
+  assert.equal(normalizeAnyDate("Sun, Oct 04 2026 9:34 AM"), "2026-10-04T00:00:00.000Z");
+  assert.equal(normalizeAnyDate("۱۴۰۵/۷/۷"), "2026-09-29T00:00:00.000Z");
+});

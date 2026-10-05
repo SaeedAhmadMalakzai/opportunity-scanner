@@ -224,3 +224,61 @@ test("fetchAllConnectorItems runs enabled sources in parallel and reports health
   assert.equal(progress.at(-1).done, 2);
   assert.equal(progress.at(-1).total, 2);
 });
+
+import { parseGovAfCards, govAfConnectors, GOV_AF_HOSTS } from "../extension/src/lib/connectors/gov-af.js";
+import { parseUnamaProcurement } from "../extension/src/lib/connectors/unama.js";
+import { parseUndpProjects } from "../extension/src/lib/connectors/undp.js";
+
+test("Afghan ministry cards (English site) parse title, posted date, place and teaser", () => {
+  const items = parseGovAfCards(fixture("govaf_mohia_en.html"), { baseUrl: "https://www.mohia.gov.af/en/all-tenders", organization: "MoHIA", sourceDomain: "mohia.gov.af", parserSource: "html:govaf-mohia" });
+  assert.ok(items.length >= 3, `got ${items.length}`);
+  items.forEach(assertItemShape);
+  assert.match(items[0].url, /^https:\/\/www\.mohia\.gov\.af\/index\.php\/en\//);
+  assert.equal(items[0].postedDate, "2026-09-26T00:00:00.000Z");
+  assert.match(items[0].title, /petrol and diesel/i);
+  assert.match(items[0].summary, /Procurement Law/);
+});
+
+test("Afghan ministry cards (Dari site) convert Jalali dates with Persian digits", () => {
+  const items = parseGovAfCards(fixture("govaf_moi_dr.html"), { baseUrl: "https://moi.gov.af/dr/all-tenders", organization: "MoI", sourceDomain: "moi.gov.af", parserSource: "html:govaf-moi" });
+  assert.ok(items.length >= 2);
+  items.forEach(assertItemShape);
+  assert.ok(items[0].postedDate && items[0].postedDate.startsWith("2026-"), `posted ${items[0].postedDate}`);
+  assert.match(items[0].url, /^https:\/\/moi\.gov\.af\/(index\.php\/)?dr\//);
+});
+
+test("Afghan ministry cards (Pashto site) parse too", () => {
+  const items = parseGovAfCards(fixture("govaf_moe_ps.html"), { baseUrl: "https://www.moe.gov.af/ps/all-tenders", organization: "MoE", sourceDomain: "moe.gov.af", parserSource: "html:govaf-moe" });
+  assert.ok(items.length >= 2);
+  items.forEach(assertItemShape);
+});
+
+test("ministry connector falls back to the next URL and dedupes", async () => {
+  let calls = 0;
+  const ctx = { settings: {}, log() {}, fetchText: async (url) => { calls++; if (url.includes("/dr/")) throw new Error("HTTP 500"); return fixture("govaf_mohia_en.html"); } };
+  const items = await govAfConnectors["govaf-moi"].fetchItems(ctx);
+  assert.equal(calls, 2);
+  assert.ok(items.length >= 3);
+  assert.ok(GOV_AF_HOSTS.includes("https://moi.gov.af/*"));
+  assert.equal(Object.keys(govAfConnectors).length, 9);
+});
+
+test("UNAMA EOI table parses title, closing date, category and UNGM link", () => {
+  const items = parseUnamaProcurement(fixture("unama_procurement.html"));
+  assert.equal(items.length, 1);
+  assertItemShape(items[0]);
+  assert.match(items[0].title, /Commercial Sale/);
+  assert.equal(items[0].deadline, "2026-06-07T00:00:00.000Z");
+  assert.equal(items[0].url, "https://www.ungm.org/Public/Notice/300225");
+  assert.equal(items[0].externalRef, "EOIUNAMA24401");
+  assert.match(items[0].summary, /Office Equipment/);
+});
+
+test("UNDP Afghanistan projects parse content cards", () => {
+  const items = parseUndpProjects(fixture("undp_projects.html"));
+  assert.ok(items.length >= 4, `got ${items.length}`);
+  items.forEach(assertItemShape);
+  assert.match(items[0].url, /^https:\/\/www\.undp\.org\/afghanistan\/projects\//);
+  assert.equal(items[0].type, "project");
+  assert.match(items[0].title, /Access to Finance/);
+});

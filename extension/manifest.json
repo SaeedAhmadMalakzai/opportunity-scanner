@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Opportunity Scanner",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "Tenders, RFPs, consultancies and trainings in Afghanistan from ACBAR, UNGM, the World Bank, Afghan Tenders and more, scored for consulting firms.",
   "action": {
     "default_popup": "src/popup/popup.html",
@@ -24,7 +24,18 @@
     "https://www.afghantenders.com/*",
     "https://www.acted.org/*",
     "https://afghanistan.actionaid.org/*",
-    "https://api.reliefweb.int/*"
+    "https://api.reliefweb.int/*",
+    "https://unama.unmissions.org/*",
+    "https://www.undp.org/*",
+    "https://moi.gov.af/*",
+    "https://www.moe.gov.af/*",
+    "https://mew.gov.af/*",
+    "https://www.mopw.gov.af/*",
+    "https://momp.gov.af/*",
+    "https://mcit.gov.af/*",
+    "https://www.moec.gov.af/*",
+    "https://molsa.gov.af/*",
+    "https://www.mohia.gov.af/*"
   ],
   "optional_host_permissions": [
     "https://*/*"

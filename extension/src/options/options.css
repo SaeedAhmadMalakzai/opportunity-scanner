@@ -72,6 +72,8 @@ textarea { resize: vertical; min-height: 92px; font-family: var(--font-mono); fo
 /* ── Sources ── */
 .reliefweb-box { padding: 12px 14px; border-radius: var(--radius-md); background: var(--bg-sunk); border: 1px dashed var(--line-strong); margin-bottom: 14px; }
 .source-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.source-group { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4); margin: 10px 0 2px; }
+.source-group:first-child { margin-top: 0; }
 .source-row { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg); transition: border-color var(--dur-fast); }
 .source-row:hover { border-color: var(--line-strong); }
 .source-row.is-off { opacity: 0.6; }

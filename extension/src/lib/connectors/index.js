@@ -5,6 +5,9 @@ import { afghanTendersConnectors } from "./afghantenders.js";
 import { actedConnectors } from "./acted.js";
 import { actionAidConnectors } from "./actionaid.js";
 import { reliefWebConnectors } from "./reliefweb.js";
+import { govAfConnectors } from "./gov-af.js";
+import { unamaConnectors } from "./unama.js";
+import { undpConnectors } from "./undp.js";
 
 export const CONNECTORS = Object.freeze({
   ...acbarConnectors,
@@ -13,7 +16,10 @@ export const CONNECTORS = Object.freeze({
   ...afghanTendersConnectors,
   ...actedConnectors,
   ...actionAidConnectors,
-  ...reliefWebConnectors
+  ...reliefWebConnectors,
+  ...unamaConnectors,
+  ...undpConnectors,
+  ...govAfConnectors
 });
 
 /** Connector ids from older releases that no longer exist; used to migrate saved settings. */
@@ -25,7 +31,7 @@ export const RETIRED_CONNECTOR_IDS = Object.freeze([
 
 export function getConnectorCatalog() {
   return Object.entries(CONNECTORS).map(([id, c]) => ({
-    id, label: c.label, description: c.description || "", homepage: c.homepage || "", requiresSetting: c.requiresSetting || null
+    id, label: c.label, description: c.description || "", homepage: c.homepage || "", requiresSetting: c.requiresSetting || null, group: c.group || "International"
   }));
 }
 

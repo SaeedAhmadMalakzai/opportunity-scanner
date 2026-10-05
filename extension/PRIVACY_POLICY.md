@@ -37,6 +37,8 @@ The extension only contacts the publishers it scans, directly from your browser:
 - `www.acted.org`
 - `afghanistan.actionaid.org`
 - `api.reliefweb.int` (only when you configure a ReliefWeb appname)
+- `unama.unmissions.org` and `www.undp.org`
+- Afghan ministry sites: `moi.gov.af`, `moe.gov.af`, `mew.gov.af`, `mopw.gov.af`, `momp.gov.af`, `mcit.gov.af`, `moec.gov.af`, `molsa.gov.af`, `mohia.gov.af`
 - any listing or notice URLs you add yourself in Settings (Chrome asks for permission per site)
 
 Requests are plain HTTPS reads of public pages. For UNGM the extension fetches the public notice page and then calls the site's own search endpoint with the anti-forgery token that page provides, exactly as the website itself does. No request carries any information about you beyond what your browser normally sends.

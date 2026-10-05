@@ -1,5 +1,5 @@
 export const APP_NAME = "Opportunity Scanner";
-export const SETTINGS_VERSION = 13;
+export const SETTINGS_VERSION = 14;
 
 export const OPPORTUNITY_TYPES = Object.freeze({
   TENDER: "tender",
@@ -66,7 +66,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
     "worldbank-procurement", "worldbank-projects",
     "afghantenders",
     "acted-tenders", "actionaid-afghanistan",
-    "reliefweb-jobs", "reliefweb-training"
+    "reliefweb-jobs", "reliefweb-training",
+    "unama-procurement", "undp-afghanistan-projects",
+    "govaf-moi", "govaf-moe", "govaf-mew", "govaf-mopw", "govaf-momp", "govaf-mcit", "govaf-moec", "govaf-molsa", "govaf-mohia"
   ],
   targetGeographies: ["afghanistan", "kabul", "herat", "mazar", "kandahar", "south asia"],
   highPriorityThreshold: 80,

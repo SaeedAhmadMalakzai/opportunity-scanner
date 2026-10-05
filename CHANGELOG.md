@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.2.0 — 2026-10-05
+
+### Sources
+- **New** 9 Afghan ministry tender boards (Interior, Education, Energy & Water, Public Works, Mines & Petroleum, Communications & IT, Economy, Labour & Social Affairs, Hajj & Religious Affairs) through one shared parser for the government Drupal theme, with Solar Hijri (Jalali) dates and Persian digits converted to Gregorian.
+- **New** UNAMA expressions of interest.
+- **New** UNDP Afghanistan projects.
+- Checked and documented as not scrapable: AGEOPS (login-only app), UNICEF and dgMarket (Cloudflare challenge), UNDP procurement and FAO (no notice list, both on UNGM), MoF and MoD (broken TLS).
+
+### Settings
+- Sources are grouped (International / Afghan government).
+
 ## 4.1.0 — 2026-10-05
 
 ### Sources (the big one)

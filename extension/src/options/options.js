@@ -65,7 +65,15 @@ function healthBadge(el, id, settings) {
 function renderSources(settings) {
   els.sourceList.replaceChildren();
   const enabled = new Set(settings.enabledSources || []);
+  let lastGroup = null;
   for (const c of catalog) {
+    if (c.group !== lastGroup) {
+      const heading = document.createElement("li");
+      heading.className = "source-group";
+      heading.textContent = c.group;
+      els.sourceList.appendChild(heading);
+      lastGroup = c.group;
+    }
     const row = rowTemplate.content.firstElementChild.cloneNode(true);
     row.dataset.id = c.id;
     const check = row.querySelector(".source-check");
