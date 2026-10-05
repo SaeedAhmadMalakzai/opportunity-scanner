@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,113 +7,148 @@
     <link rel="stylesheet" href="./options.css" />
   </head>
   <body>
-    <div class="container">
+    <div class="page">
       <header class="header">
-        <img src="../../icons/icon48.png" alt="" width="28" height="28" />
-        <div>
-          <h1>Opportunity Scanner</h1>
-          <p class="subtitle">Settings &amp; Configuration</p>
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div class="header-copy">
+          <h1>Settings</h1>
+          <p>Opportunity Scanner <span id="version" class="mono"></span> · everything stays in this browser</p>
         </div>
-        <button id="themeToggle" class="theme-btn" title="Toggle light/dark theme">&#9788;</button>
+        <div class="header-actions">
+          <button id="scanNow" class="btn btn-ghost" type="button">Scan now</button>
+          <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme" title="Theme">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path class="ico-sun" d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle class="ico-sun" cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path class="ico-moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
       </header>
 
-      <section class="section">
-        <h2>Scan Configuration</h2>
-        <div class="grid">
-          <label title="Only results with a relevance score at or above this number will appear.">
-            Minimum Score Threshold
-            <input id="minScore" type="number" min="0" max="100" />
-            <span class="hint">Results below this score are hidden (0-100)</span>
-          </label>
-          <label title="The extension runs scans automatically at this interval.">
-            Scan Interval (hours)
-            <input id="scanIntervalHours" type="number" min="1" max="48" />
-            <span class="hint">How often automatic scans run</span>
-          </label>
-          <label title="Desktop notification for scores at or above this.">
-            High Priority Alert Threshold
-            <input id="highPriorityThreshold" type="number" min="50" max="100" />
-            <span class="hint">Notification for scores at or above this</span>
-          </label>
-        </div>
-      </section>
+      <nav class="toc" aria-label="Sections">
+        <a href="#sources">Sources</a><a href="#profile">Matching profile</a><a href="#own">Your own sources</a><a href="#schedule">Schedule</a><a href="#data">Data</a>
+      </nav>
 
-      <section class="section">
-        <h2>Target Geographies</h2>
-        <label title="Comma-separated list of locations that boost score (+10 points).">
-          Regions (comma separated)
-          <input id="targetGeographies" type="text" placeholder="afghanistan, kabul, herat" />
-          <span class="hint">Opportunities matching these locations get a score boost</span>
-        </label>
-      </section>
+      <main class="sections">
+        <section class="section" id="sources" aria-labelledby="sourcesTitle">
+          <div class="section-head">
+            <h2 id="sourcesTitle">Sources</h2>
+            <p>Each source is fetched directly from the publisher. Health shows the result of the last scan. Use <em>Test</em> to check one source without a full scan.</p>
+          </div>
+          <div class="reliefweb-box">
+            <label class="field">
+              <span>ReliefWeb appname</span>
+              <input id="reliefwebAppName" type="text" placeholder="e.g. mycompany-opportunity-scanner-x7q" autocomplete="off" spellcheck="false" />
+              <small>ReliefWeb's API needs a free, pre-approved appname. <a href="https://apidoc.reliefweb.int/parameters#appname" target="_blank" rel="noopener">Request one</a> (takes a day or two), paste it here, and the two ReliefWeb sources start working.</small>
+            </label>
+          </div>
+          <ul id="sourceList" class="source-list" aria-busy="true"></ul>
+        </section>
 
-      <section class="section">
-        <h2>Enabled Sources</h2>
-        <p class="hint" style="margin-bottom: 8px">Select which connectors to use during scans.</p>
-        <div id="sources" class="sources-grid"></div>
-      </section>
+        <section class="section" id="profile" aria-labelledby="profileTitle">
+          <div class="section-head">
+            <h2 id="profileTitle">Matching profile</h2>
+            <p>Every notice is scored 0–100. Built-in terms cover project management, M&amp;E, HR, training and capacity building. Add your own terms to tune it.</p>
+          </div>
+          <div class="grid-2">
+            <label class="field field-span">
+              <span>Custom keywords <small>one per line · +15 each</small></span>
+              <textarea id="customKeywords" rows="5" placeholder="gender mainstreaming&#10;climate resilience&#10;digital literacy"></textarea>
+            </label>
+            <label class="field field-span">
+              <span>Target geographies <small>comma separated · +10 when matched</small></span>
+              <input id="targetGeographies" type="text" placeholder="afghanistan, kabul, herat" />
+            </label>
+            <label class="field">
+              <span>Minimum score to keep</span>
+              <input id="minScore" type="number" min="0" max="100" step="5" />
+              <small>Notices below this are discarded during the scan.</small>
+            </label>
+            <label class="field">
+              <span>Notify me at score</span>
+              <input id="highPriorityThreshold" type="number" min="50" max="100" step="5" />
+              <small>Desktop notification for strong matches.</small>
+            </label>
+            <label class="toggle field-span">
+              <input id="notificationsEnabled" type="checkbox" />
+              <span>Desktop notifications for high-priority matches</span>
+            </label>
+          </div>
+        </section>
 
-      <section class="section">
-        <h2>Source Health</h2>
-        <p class="hint" style="margin-bottom: 8px">Status from the most recent scan. Shows response time, item count, and errors per source.</p>
-        <div id="sourceHealth" class="health-grid">
-          <p class="hint">No scan data yet. Run a scan first.</p>
-        </div>
-      </section>
+        <section class="section" id="own" aria-labelledby="ownTitle">
+          <div class="section-head">
+            <h2 id="ownTitle">Your own sources</h2>
+            <p>Add listing pages to crawl and individual notice pages to parse. Only <code>https://</code> links are accepted. Chrome will ask once for permission to read each new site.</p>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>Listing pages to crawl <small>one URL per line</small></span>
+              <textarea id="customSourceUrls" rows="5" placeholder="https://example.org/tenders"></textarea>
+              <small id="customSourceUrlsHint" class="hint"></small>
+            </label>
+            <label class="field">
+              <span>Individual notice pages <small>one URL per line</small></span>
+              <textarea id="manualLinks" rows="5" placeholder="https://example.org/tender/12345"></textarea>
+              <small id="manualLinksHint" class="hint"></small>
+            </label>
+          </div>
+        </section>
 
-      <section class="section">
-        <h2>Custom Keywords</h2>
-        <label title="One keyword or phrase per line. Each match adds +15 to score.">
-          Additional keywords (one per line)
-          <textarea id="customKeywords" rows="5" placeholder="donor coordination&#10;gender mainstreaming&#10;climate resilience"></textarea>
-          <span class="hint">These keywords boost matching score when found in opportunities</span>
-        </label>
-      </section>
+        <section class="section" id="schedule" aria-labelledby="scheduleTitle">
+          <div class="section-head">
+            <h2 id="scheduleTitle">Schedule &amp; performance</h2>
+            <p>Automatic scans run in the background while Chrome is open.</p>
+          </div>
+          <div class="grid-3">
+            <label class="field">
+              <span>Scan every</span>
+              <div class="input-suffix"><input id="scanIntervalHours" type="number" min="1" max="48" /><span>hours</span></div>
+            </label>
+            <label class="field">
+              <span>Per-request timeout</span>
+              <div class="input-suffix"><input id="fetchTimeoutSec" type="number" min="5" max="60" /><span>seconds</span></div>
+            </label>
+            <label class="field">
+              <span>Parallel requests</span>
+              <input id="maxConcurrentFetches" type="number" min="1" max="8" />
+            </label>
+          </div>
+        </section>
 
-      <section class="section">
-        <h2>Manual Links to Scan</h2>
-        <label title="One URL per line. Each page is fetched, parsed, and scored.">
-          Opportunity page URLs (one per line)
-          <textarea id="manualLinks" rows="5" placeholder="https://example.org/tender/12345"></textarea>
-          <span class="hint">Direct links to individual tender/project/training pages</span>
-        </label>
-      </section>
+        <section class="section" id="data" aria-labelledby="dataTitle">
+          <div class="section-head">
+            <h2 id="dataTitle">Data</h2>
+            <p>Opportunities, notes, scan history and source health live in <code>chrome.storage.local</code>. Nothing is sent anywhere.</p>
+          </div>
+          <div class="row-actions">
+            <button id="clearBtn" class="btn btn-danger" type="button">Delete all opportunities &amp; history</button>
+            <span id="dataSummary" class="muted"></span>
+          </div>
+        </section>
+      </main>
 
-      <section class="section">
-        <h2>Custom Source URLs</h2>
-        <label title="One URL per line. All links are extracted from each page.">
-          Additional listing page URLs (one per line)
-          <textarea id="customSourceUrls" rows="4" placeholder="https://npa.gov.af/tenders"></textarea>
-          <span class="hint">These pages will be crawled for links alongside the built-in connectors</span>
-        </label>
-      </section>
-
-      <section class="section">
-        <h2>Performance</h2>
-        <div class="grid">
-          <label title="Max wait per network request (ms).">
-            Fetch Timeout (ms)
-            <input id="fetchTimeoutMs" type="number" min="3000" max="30000" step="1000" />
-            <span class="hint">Max wait per network request</span>
-          </label>
-          <label title="How many websites to fetch in parallel.">
-            Max Concurrent Fetches
-            <input id="maxConcurrentFetches" type="number" min="1" max="10" />
-            <span class="hint">Parallel network request limit</span>
-          </label>
-        </div>
-      </section>
-
-      <div class="actions">
-        <button id="saveBtn" class="btn btn-primary">Save Settings</button>
-        <button id="clearBtn" class="btn btn-danger">Clear All Data</button>
+      <div class="savebar">
+        <span id="saveStatus" class="save-status">All changes saved</span>
+        <button id="saveBtn" class="btn btn-primary" type="button">Save settings</button>
       </div>
-      <div id="msg" class="msg"></div>
-
-      <footer class="options-footer">
-        <span>Opportunity Scanner v4.0.0</span>
-      </footer>
     </div>
+
+    <template id="sourceRowTemplate">
+      <li class="source-row">
+        <label class="source-toggle"><input type="checkbox" class="source-check" /><span class="sr-only">Enabled</span></label>
+        <div class="source-body">
+          <div class="source-top">
+            <span class="source-label"></span>
+            <span class="health"></span>
+          </div>
+          <p class="source-desc"></p>
+          <div class="source-foot">
+            <a class="source-home" target="_blank" rel="noopener">Open site</a>
+            <button class="link-btn source-test" type="button">Test</button>
+            <span class="source-result"></span>
+          </div>
+        </div>
+      </li>
+    </template>
+
     <script type="module" src="./options.js"></script>
   </body>
 </html>

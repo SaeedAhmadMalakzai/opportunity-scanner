@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Opportunity Scanner",
-  "version": "4.0.0",
-  "description": "Discover tenders, RFPs, RFQs, projects, trainings, and consultancy opportunities in Afghanistan from UN agencies, ACBAR, World Bank, and more.",
+  "version": "4.1.0",
+  "description": "Tenders, RFPs, consultancies and trainings in Afghanistan from ACBAR, UNGM, the World Bank, Afghan Tenders and more, scored for consulting firms.",
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_title": "Opportunity Scanner"
@@ -17,8 +17,21 @@
     "notifications"
   ],
   "host_permissions": [
+    "https://www.acbar.org/*",
+    "https://www.ungm.org/*",
+    "https://search.worldbank.org/*",
+    "https://projects.worldbank.org/*",
+    "https://www.afghantenders.com/*",
+    "https://www.acted.org/*",
+    "https://afghanistan.actionaid.org/*",
+    "https://api.reliefweb.int/*"
+  ],
+  "optional_host_permissions": [
     "https://*/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  },
   "options_page": "src/options/options.html",
   "icons": {
     "16": "icons/icon16.png",

@@ -1,6 +1,6 @@
 # Privacy Policy for Opportunity Scanner
 
-**Last updated:** March 27, 2026
+**Last updated:** October 5, 2026
 
 ## Overview
 
@@ -28,28 +28,18 @@ No data leaves the browser. There is no remote database, analytics, or cloud syn
 
 ## Network Requests
 
-The extension makes HTTPS requests only to publicly available, non-authenticated pages on:
+The extension only contacts the publishers it scans, directly from your browser:
 
-- **ACBAR** (`acbar.org`) — RFPs and RFQs
-- **ReliefWeb** (`reliefweb.int`) — jobs and training
-- **World Bank** (`search.worldbank.org`) — project data API
-- **UNDP** (`procurement-notices.undp.org`, `undp.org`) — procurement notices
-- **UNGM** (`ungm.org`) — UN Global Marketplace tenders
-- **UNJobs** (`unjobs.org`) — UN job vacancies
-- **UN Women** (`unwomen.org`) — procurement
-- **UNOPS** (`unops.org`, `jobs.unops.org`) — opportunities
-- **WFP** (`wfp.org`) — procurement
-- **UNICEF** (`unicef.org`) — supply and contracts
-- **FAO** (`fao.org`) — procurement calls
-- **IOM** (`iom.int`) — procurement
-- **Afghan Tenders** (`afghantenders.com`) — Afghan tender aggregator
-- **Tenders On Time** (`tendersontime.com`) — international tender portal
-- **ACTED** (`acted.org`) — NGO tenders
-- **AKDN** (`akdn.org`, `the.akdn`) — Aga Khan Development Network procurement
-- **CARE International** (`care-international.org`, `care.org`) — humanitarian procurement
-- **ActionAid** (`actionaid.org`) — NGO procurement
+- `www.acbar.org`
+- `www.ungm.org`
+- `search.worldbank.org` and `projects.worldbank.org`
+- `www.afghantenders.com`
+- `www.acted.org`
+- `afghanistan.actionaid.org`
+- `api.reliefweb.int` (only when you configure a ReliefWeb appname)
+- any listing or notice URLs you add yourself in Settings (Chrome asks for permission per site)
 
-Additionally, user-configured custom URLs may be fetched.
+Requests are plain HTTPS reads of public pages. For UNGM the extension fetches the public notice page and then calls the site's own search endpoint with the anti-forgery token that page provides, exactly as the website itself does. No request carries any information about you beyond what your browser normally sends.
 
 ## Permissions
 

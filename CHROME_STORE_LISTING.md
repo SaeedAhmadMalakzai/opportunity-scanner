@@ -4,14 +4,14 @@ Use the sections below when publishing **Opportunity Scanner** on the Chrome Web
 
 ## Short description (132 characters max)
 
-Discover tenders, RFPs, projects, and training opportunities in Afghanistan from 20 UN, NGO, and government sources.
+Tenders, RFPs, consultancies and trainings in Afghanistan from ACBAR, UNGM, World Bank, Afghan Tenders and more, scored for you.
 
 ## Detailed description
 
 Opportunity Scanner is a smart opportunity discovery tool built for consulting and development firms operating in Afghanistan.
 
 **What it does:**
-- Scans 20 direct source connectors (UN agencies, ACBAR, World Bank, Afghan Tenders, and more)
+- Scans ACBAR (RFPs, RFQs, jobs), the UN Global Marketplace (every UN agency), the World Bank procurement and projects APIs, Afghan Tenders, ACTED, ActionAid Afghanistan and ReliefWeb
 - Extracts titles, deadlines, organizations, and summaries from each listing
 - Scores every result against your company profile using weighted keyword matching
 - Filters out expired deadlines automatically
@@ -19,14 +19,14 @@ Opportunity Scanner is a smart opportunity discovery tool built for consulting a
 - Exports filtered results to CSV for team sharing
 
 **Key features:**
-- 20 direct source connectors — no search engine scraping
+- Direct, parallel source connectors — a full scan takes seconds, no search engine scraping
 - Relevance scoring tuned for consulting services (PM, HR, M&E, training, capacity building)
 - Smart deduplication and duplicate clustering
 - Desktop notifications for high-priority opportunities (score 80+)
 - Configurable scan intervals, score thresholds, and geography targeting
-- Clickable stat badges to quick-filter by All / New / Saved
-- Hover tooltips on every UI element
-- One-click CSV export with all metadata
+- Inbox with Active / New / Saved / Dismissed, search, filters, undo and keyboard shortcuts
+- Per-source health with a one-click test for each source
+- One-click CSV export of the visible list or a selection
 - All data stored locally — zero cloud dependency
 
 **Who it's for:**
