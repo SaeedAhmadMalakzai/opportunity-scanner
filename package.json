@@ -1,6 +1,6 @@
 {
   "name": "opportunity-scanner",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "private": true,
   "type": "module",
   "description": "Chrome extension that discovers tenders, RFPs, consultancies and trainings in Afghanistan.",

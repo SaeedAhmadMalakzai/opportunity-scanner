@@ -92,6 +92,16 @@ test("filterAndSort hides dismissed by default and supports every filter", () =>
   assert.deepEqual(filterAndSort(sample, { sortBy: "source" }).map((i) => i.id), ["2", "1"]);
 });
 
+test("filterAndSort hides closed notices unless showClosed or the item is saved", () => {
+  const closed = [
+    { id: "c1", title: "Closed new", score: 50, status: "new", deadline: "2000-01-01", matchedKeywords: [], summary: "" },
+    { id: "c2", title: "Closed saved", score: 50, status: "saved", deadline: "2000-01-01", matchedKeywords: [], summary: "" },
+    { id: "c3", title: "Open", score: 50, status: "new", deadline: "2999-01-01", matchedKeywords: [], summary: "" }
+  ];
+  assert.deepEqual(filterAndSort(closed).map((i) => i.id).sort(), ["c2", "c3"]);
+  assert.deepEqual(filterAndSort(closed, { showClosed: true }).map((i) => i.id).sort(), ["c1", "c2", "c3"]);
+});
+
 test("countByStatus", () => {
   assert.deepEqual(countByStatus(sample), { total: 3, new: 1, saved: 1, dismissed: 1 });
 });

@@ -108,10 +108,12 @@ export function filterAndSort(items, params = {}) {
   const kf = params.keywordFilter || "all";
   const srcf = params.sourceFilter || "all";
   const sq = String(params.searchQuery || "").toLowerCase().trim();
+  const showClosed = Boolean(params.showClosed);
   const sorter = SORTERS[params.sortBy] || SORTERS.score;
 
   const filtered = items.filter((it) => {
     if ((it.score || 0) < min) return false;
+    if (!showClosed && it.status !== ITEM_STATUS.SAVED && isExpired(it.deadline)) return false;
     if (tf !== "all" && it.type !== tf) return false;
     if (sf === "all" ? it.status === ITEM_STATUS.DISMISSED : it.status !== sf) return false;
     if (kf !== "all" && !(it.matchedKeywords || []).includes(kf)) return false;

@@ -56,7 +56,7 @@ function healthBadge(el, id, settings) {
   if (c?.requiresSetting && !String(settings[c.requiresSetting] || "").trim()) { el.classList.add("is-needs"); el.textContent = "needs appname"; el.title = "Add the ReliefWeb appname above"; return; }
   if (!h) { el.textContent = "not scanned yet"; el.title = ""; return; }
   el.classList.add(`is-${h.status}`);
-  el.textContent = h.status === "ok" ? `${h.count} items · ${(h.ms / 1000).toFixed(1)}s · ${timeAgo(h.at)}`
+  el.textContent = h.status === "ok" ? `${h.count} item${h.count === 1 ? "" : "s"} · ${(h.ms / 1000).toFixed(1)}s · ${timeAgo(h.at)}`
     : h.status === "empty" ? `0 items · ${timeAgo(h.at)}`
     : `failed · ${timeAgo(h.at)}`;
   el.title = h.error || `Last checked ${new Date(h.at).toLocaleString()}`;
@@ -170,11 +170,15 @@ function collect() {
   };
 }
 
-/** Request host permission for any user-added origins. Must be triggered from the click handler (user gesture). */
+/**
+ * Request host permission for any user-added origins. chrome.permissions.request only works inside a
+ * user gesture, so it is called synchronously from the click handler (already-granted origins resolve
+ * true without a prompt, so no `contains` pre-check that would break the gesture).
+ */
 function requestOriginsSync(urls) {
   const origins = [...new Set(urls.map(originPattern).filter(Boolean))];
   if (!origins.length) return Promise.resolve({ origins, granted: true });
-  return chrome.permissions.contains({ origins }).then((has) => has ? { origins, granted: true } : chrome.permissions.request({ origins }).then((granted) => ({ origins, granted })));
+  return chrome.permissions.request({ origins }).then((granted) => ({ origins, granted }));
 }
 
 async function saveSettings({ quiet = false, permissionPromise = null } = {}) {

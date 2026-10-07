@@ -8,34 +8,30 @@
   </head>
   <body>
     <div class="app" id="app">
-      <header class="topbar">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <div class="brand-copy">
-            <h1>Opportunity Scanner</h1>
-            <p id="brandSub">Afghanistan · tenders &amp; consultancies</p>
+      <header class="masthead">
+        <div class="masthead-row">
+          <h1 class="wordmark"><span class="wordmark-mark" aria-hidden="true"></span>Opportunity<b>Scanner</b></h1>
+          <div class="masthead-tools">
+            <button id="themeToggle" class="tool" type="button" aria-label="Toggle light or dark theme" title="Theme">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path class="ico-sun" d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle class="ico-sun" cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path class="ico-moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </button>
+            <button id="densityToggle" class="tool" type="button" aria-label="Toggle compact rows" title="Density">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+            <button id="settingsBtn" class="tool" type="button" aria-label="Open settings" title="Settings">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M4 12h2M10 12h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            </button>
           </div>
         </div>
-        <div class="topbar-actions">
-          <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle light or dark theme" title="Theme">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path class="ico-sun" d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle class="ico-sun" cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path class="ico-moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-          </button>
-          <button id="densityToggle" class="icon-btn" type="button" aria-label="Toggle compact rows" title="Compact rows">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          </button>
-          <button id="settingsBtn" class="icon-btn" type="button" aria-label="Open settings" title="Settings">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-          </button>
-          <button id="scanBtn" class="btn btn-primary" type="button" title="Fetch from all enabled sources now">Scan</button>
-        </div>
+        <p id="brandSub" class="statusline">Afghanistan · tenders &amp; consultancies</p>
       </header>
 
       <section id="scanPanel" class="scan-panel" hidden aria-live="polite">
         <div class="scan-row">
-          <span class="scan-spinner" aria-hidden="true"></span>
+          <span class="scan-pulse" aria-hidden="true"></span>
           <span id="scanText" class="scan-text">Starting…</span>
           <span id="scanElapsed" class="scan-elapsed">0:00</span>
-          <button id="stopBtn" class="btn btn-ghost btn-sm" type="button">Stop</button>
+          <button id="stopBtn" class="btn btn-line btn-sm" type="button">Stop</button>
         </div>
         <div class="scan-track"><div id="scanBar" class="scan-bar"></div></div>
         <div id="scanRunning" class="scan-running"></div>
@@ -46,24 +42,27 @@
         <button id="bannerAction" class="link-btn" type="button" hidden></button>
       </div>
 
-      <section class="toolbar">
+      <section class="commandbar">
         <div class="search-wrap">
-          <svg class="search-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           <label class="sr-only" for="searchBox">Search opportunities</label>
           <input type="search" id="searchBox" class="search-input" placeholder="Search title, organisation, notes" autocomplete="off" spellcheck="false" />
           <kbd class="search-kbd" aria-hidden="true">/</kbd>
         </div>
-        <div class="segmented" id="statusSeg" role="tablist" aria-label="Status">
-          <button type="button" role="tab" data-status="all" aria-selected="true">Active <span class="seg-count" data-count="active">0</span></button>
-          <button type="button" role="tab" data-status="new" aria-selected="false">New <span class="seg-count" data-count="new">0</span></button>
-          <button type="button" role="tab" data-status="saved" aria-selected="false">Saved <span class="seg-count" data-count="saved">0</span></button>
-          <button type="button" role="tab" data-status="dismissed" aria-selected="false">Dismissed <span class="seg-count" data-count="dismissed">0</span></button>
-        </div>
+        <button id="scanBtn" class="btn btn-primary" type="button" title="Fetch from all enabled sources now (r)">Scan</button>
+      </section>
+
+      <nav class="tabs" id="statusSeg" role="tablist" aria-label="Status">
+        <button type="button" role="tab" data-status="all" aria-selected="true">Active<span class="seg-count" data-count="active">0</span></button>
+        <button type="button" role="tab" data-status="new" aria-selected="false">New<span class="seg-count" data-count="new">0</span></button>
+        <button type="button" role="tab" data-status="saved" aria-selected="false">Saved<span class="seg-count" data-count="saved">0</span></button>
+        <button type="button" role="tab" data-status="dismissed" aria-selected="false">Dismissed<span class="seg-count" data-count="dismissed">0</span></button>
+      </nav>
+
+      <section class="filters">
         <div class="filter-row">
-          <label class="field">
-            <span>Type</span>
+          <label class="field"><span>Type</span>
             <select id="typeFilter">
-              <option value="all">All types</option>
+              <option value="all">All</option>
               <option value="tender">Tender / RFP / RFQ</option>
               <option value="consultancy">Consultancy / job</option>
               <option value="training">Training</option>
@@ -71,30 +70,23 @@
               <option value="other">Other</option>
             </select>
           </label>
-          <label class="field">
-            <span>Sort</span>
+          <label class="field"><span>Sort</span>
             <select id="sortBy">
               <option value="score">Best match</option>
-              <option value="deadline">Deadline soonest</option>
+              <option value="deadline">Deadline</option>
               <option value="date">Recently found</option>
               <option value="source">Source</option>
             </select>
           </label>
-          <label class="field field-score">
-            <span>Min score <output id="minScoreValue" for="minScore">0</output></span>
+          <label class="field field-score"><span>Min <output id="minScoreValue" for="minScore">0</output></span>
             <input id="minScore" type="range" min="0" max="100" value="0" step="5" />
           </label>
           <button id="moreFilters" class="link-btn" type="button" aria-expanded="false">More</button>
         </div>
         <div id="extraFilters" class="filter-row filter-row-extra" hidden>
-          <label class="field">
-            <span>Keyword</span>
-            <select id="keywordFilter"><option value="all">Any keyword</option></select>
-          </label>
-          <label class="field">
-            <span>Source</span>
-            <select id="sourceFilter"><option value="all">All sources</option></select>
-          </label>
+          <label class="field"><span>Keyword</span><select id="keywordFilter"><option value="all">Any</option></select></label>
+          <label class="field"><span>Source</span><select id="sourceFilter"><option value="all">All</option></select></label>
+          <label class="check"><input type="checkbox" id="showClosed" /><span>Show closed</span></label>
           <button id="resetFilters" class="link-btn" type="button">Reset</button>
         </div>
       </section>
@@ -111,15 +103,15 @@
 
       <footer class="footer">
         <button id="healthLink" class="link-btn footer-health" type="button" title="Open source health">Sources</button>
-        <span class="kbd-hint"><kbd>j</kbd><kbd>k</kbd> move · <kbd>s</kbd> save · <kbd>d</kbd> dismiss · <kbd>o</kbd> open</span>
+        <span class="kbd-hint"><kbd>j</kbd><kbd>k</kbd> <kbd>s</kbd> <kbd>d</kbd> <kbd>o</kbd> <kbd>x</kbd> <kbd>r</kbd></span>
         <span id="version" class="version"></span>
       </footer>
 
       <div id="bulkBar" class="bulk-bar" hidden>
         <span id="bulkCount">0 selected</span>
-        <button id="bulkSave" class="btn btn-sm btn-save" type="button">Save</button>
-        <button id="bulkDismiss" class="btn btn-sm btn-dismiss" type="button">Dismiss</button>
-        <button id="bulkExport" class="btn btn-sm btn-ghost" type="button">Export CSV</button>
+        <button id="bulkSave" class="btn btn-sm btn-float" type="button">Save</button>
+        <button id="bulkDismiss" class="btn btn-sm btn-float" type="button">Dismiss</button>
+        <button id="bulkExport" class="btn btn-sm btn-float" type="button">Export</button>
         <button id="bulkClear" class="link-btn" type="button">Clear</button>
       </div>
 
@@ -130,13 +122,13 @@
 
       <div id="onboarding" class="onboarding" hidden>
         <div class="onboarding-box" role="dialog" aria-labelledby="onboardTitle" aria-modal="true">
-          <span class="brand-mark brand-mark-lg" aria-hidden="true"></span>
-          <h2 id="onboardTitle">Find the bids worth your time</h2>
-          <p>Scans ACBAR, UNGM, the World Bank, Afghan Tenders and more, then scores every notice against a consulting profile. Nothing leaves your browser.</p>
+          <p class="onboarding-kicker">Opportunity Scanner</p>
+          <h2 id="onboardTitle">Every open bid in Afghanistan, ranked for you.</h2>
+          <p>22 sources: ACBAR, UNGM, the World Bank, nine ministries, Afghan Tenders, UNAMA, UNDP and more. Each notice is scored against a consulting profile. Nothing leaves this browser.</p>
           <ol>
-            <li><strong>Scan</strong> to pull the latest notices.</li>
-            <li><strong>Triage</strong> with filters, then save or dismiss.</li>
-            <li><strong>Tune</strong> keywords and sources in Settings.</li>
+            <li><b>Scan</b> pulls the latest notices.</li>
+            <li><b>Triage</b> with filters; save or dismiss.</li>
+            <li><b>Tune</b> keywords and sources in Settings.</li>
           </ol>
           <button id="dismissOnboarding" class="btn btn-primary" type="button">Run first scan</button>
         </div>
@@ -145,35 +137,32 @@
 
     <template id="cardTemplate">
       <article class="card" tabindex="-1">
-        <span class="card-rail" aria-hidden="true"></span>
         <input type="checkbox" class="card-check" aria-label="Select" />
+        <div class="score" title="Relevance score 0–100"><span class="score-value"></span><span class="score-bar" aria-hidden="true"><i></i></span></div>
         <div class="card-main">
-          <div class="card-head">
-            <a class="card-title" target="_blank" rel="noopener noreferrer"></a>
-            <span class="score" title="Relevance score 0–100"><span class="score-value"></span><span class="score-ring" aria-hidden="true"></span></span>
-          </div>
+          <a class="card-title" target="_blank" rel="noopener noreferrer"></a>
           <div class="card-meta">
+            <span class="meta-type"></span>
             <span class="meta-org"></span>
             <span class="meta-source"></span>
             <span class="meta-loc"></span>
-            <span class="meta-type"></span>
-          </div>
-          <div class="card-dates">
-            <span class="deadline"></span>
-            <span class="posted"></span>
-            <span class="cluster"></span>
           </div>
           <p class="card-summary"></p>
           <div class="card-keywords"></div>
           <div class="card-note" hidden>
-            <input type="text" class="note-input" placeholder="Add a private note…" maxlength="2000" />
+            <input type="text" class="note-input" placeholder="Private note…" maxlength="2000" />
           </div>
           <div class="card-actions">
-            <button class="btn btn-sm btn-save" data-action="save" type="button">Save</button>
-            <button class="btn btn-sm btn-dismiss" data-action="dismiss" type="button">Dismiss</button>
-            <button class="btn btn-sm btn-ghost" data-action="note" type="button">Note</button>
-            <button class="btn btn-sm btn-ghost" data-action="copy" type="button">Copy link</button>
+            <button class="act" data-action="save" type="button">Save</button>
+            <button class="act" data-action="dismiss" type="button">Dismiss</button>
+            <button class="act" data-action="note" type="button">Note</button>
+            <button class="act" data-action="copy" type="button">Copy link</button>
           </div>
+        </div>
+        <div class="card-side">
+          <span class="deadline"></span>
+          <span class="posted"></span>
+          <span class="cluster"></span>
         </div>
       </article>
     </template>

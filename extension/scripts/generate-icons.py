@@ -17,11 +17,11 @@ def draw_icon(size: int) -> Image.Image:
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     pad = max(1, size // 16)
-    # Deep teal background, rounded
-    bg = (18, 100, 120, 255)
+    # Cobalt background, barely rounded (Swiss data-desk palette)
+    bg = (0, 71, 225, 255)
     d.rounded_rectangle(
         [pad, pad, size - pad, size - pad],
-        radius=max(2, size // 6),
+        radius=max(1, size // 9),
         fill=bg,
     )
     # Magnifying glass (white)
@@ -43,7 +43,7 @@ def draw_icon(size: int) -> Image.Image:
     dot_r = max(1, size // 28)
     d.ellipse(
         [size * 0.62 - dot_r, size * 0.28 - dot_r, size * 0.62 + dot_r, size * 0.28 + dot_r],
-        fill=(255, 214, 102, 255),
+        fill=(255, 106, 61, 255),
     )
     return img
 

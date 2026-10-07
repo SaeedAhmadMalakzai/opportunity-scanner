@@ -1,5 +1,22 @@
 # Changelog
 
+## 4.3.0 — 2026-10-07
+
+### Redesign: "Swiss data-desk"
+A different visual system, replacing the warm rounded cards of 4.1:
+- Hairline-ruled rows instead of floating cards; no shadows; 2px corners; structure comes from rules, spacing and a strict type scale.
+- Large monospace score numerals with a tier bar, monospace status line, deadlines and figures (tabular numerals throughout).
+- Cobalt is the only interactive colour; orange is reserved for urgency (due within 3 days); green for positive actions and keyword matches.
+- Underlined tabs for Active / New / Saved / Dismissed, underline-only selects, text actions instead of pill buttons.
+- Settings page with a sticky numbered rail (01–05) and ruled, grouped source list.
+- New cobalt toolbar icons.
+
+### Re-audit fixes
+- Closed notices (deadline passed) are now hidden by default; a *Show closed* filter reveals them, and saved notices always stay visible.
+- Host-permission prompt for custom URLs is requested directly inside the click gesture (the previous `contains` pre-check could cancel the prompt).
+- Status line shows source count, notice count and last scan time at a glance.
+- Settings health badge pluralisation.
+
 ## 4.2.0 — 2026-10-05
 
 ### Sources

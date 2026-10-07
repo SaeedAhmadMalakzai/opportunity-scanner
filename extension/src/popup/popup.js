@@ -11,7 +11,7 @@ const els = {
   banner: $("banner"), bannerText: $("bannerText"), bannerAction: $("bannerAction"),
   search: $("searchBox"), statusSeg: $("statusSeg"), typeFilter: $("typeFilter"), sortBy: $("sortBy"),
   minScore: $("minScore"), minScoreValue: $("minScoreValue"), moreFilters: $("moreFilters"), extraFilters: $("extraFilters"),
-  keywordFilter: $("keywordFilter"), sourceFilter: $("sourceFilter"), resetFilters: $("resetFilters"),
+  keywordFilter: $("keywordFilter"), sourceFilter: $("sourceFilter"), showClosed: $("showClosed"), resetFilters: $("resetFilters"),
   selectAll: $("selectAll"), resultCount: $("resultCount"), lastScan: $("lastScan"), results: $("results"),
   bulkBar: $("bulkBar"), bulkCount: $("bulkCount"), bulkSave: $("bulkSave"), bulkDismiss: $("bulkDismiss"), bulkExport: $("bulkExport"), bulkClear: $("bulkClear"),
   themeToggle: $("themeToggle"), densityToggle: $("densityToggle"), settingsBtn: $("settingsBtn"), healthLink: $("healthLink"),
@@ -20,7 +20,7 @@ const els = {
 
 const PREF_KEYS = ["os_theme", "os_density", "os_onboarded", "os_filters"];
 const state = {
-  params: { statusFilter: "all", typeFilter: "all", sortBy: "score", minScore: 0, keywordFilter: "all", sourceFilter: "all", searchQuery: "" },
+  params: { statusFilter: "all", typeFilter: "all", sortBy: "score", minScore: 0, keywordFilter: "all", sourceFilter: "all", searchQuery: "", showClosed: false },
   items: [], counts: { total: 0, new: 0, saved: 0, dismissed: 0 }, facets: { keywords: [], sources: [] },
   scanState: null, health: {},
   selectedIds: new Set(), focusedId: null,
@@ -66,7 +66,8 @@ function syncFilterControls() {
   els.minScore.value = String(p.minScore);
   els.minScoreValue.value = String(p.minScore);
   for (const b of els.statusSeg.querySelectorAll("button")) b.setAttribute("aria-selected", String(b.dataset.status === p.statusFilter));
-  const extraActive = p.keywordFilter !== "all" || p.sourceFilter !== "all";
+  els.showClosed.checked = Boolean(p.showClosed);
+  const extraActive = p.keywordFilter !== "all" || p.sourceFilter !== "all" || p.showClosed;
   if (extraActive) { els.extraFilters.hidden = false; els.moreFilters.setAttribute("aria-expanded", "true"); }
   els.moreFilters.textContent = extraActive ? "More ·" : "More";
 }
@@ -91,6 +92,7 @@ els.typeFilter.addEventListener("change", () => { state.params.typeFilter = els.
 els.sortBy.addEventListener("change", () => { state.params.sortBy = els.sortBy.value; refresh(); });
 els.keywordFilter.addEventListener("change", () => { state.params.keywordFilter = els.keywordFilter.value; refresh(); });
 els.sourceFilter.addEventListener("change", () => { state.params.sourceFilter = els.sourceFilter.value; refresh(); });
+els.showClosed.addEventListener("change", () => { state.params.showClosed = els.showClosed.checked; refresh(); });
 els.statusSeg.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-status]");
   if (!b) return;
@@ -104,7 +106,7 @@ els.moreFilters.addEventListener("click", () => {
   els.moreFilters.setAttribute("aria-expanded", String(open));
 });
 els.resetFilters.addEventListener("click", () => {
-  Object.assign(state.params, { statusFilter: "all", typeFilter: "all", minScore: 0, keywordFilter: "all", sourceFilter: "all", searchQuery: "" });
+  Object.assign(state.params, { statusFilter: "all", typeFilter: "all", minScore: 0, keywordFilter: "all", sourceFilter: "all", searchQuery: "", showClosed: false });
   refresh();
 });
 
@@ -136,7 +138,9 @@ function renderCounts() {
   const c = state.counts;
   const set = (k, v) => { const el = els.statusSeg.querySelector(`[data-count="${k}"]`); if (el) el.textContent = String(v); };
   set("active", c.total - c.dismissed); set("new", c.new); set("saved", c.saved); set("dismissed", c.dismissed);
-  els.brandSub.textContent = `Afghanistan · ${plural(Object.keys(state.health).length || 0, "source")} · ${plural(c.total, "notice")}`;
+  const st = state.scanState;
+  const when = st?.lastScanAt ? ` · scanned ${relativeTime(st.lastScanAt)}` : "";
+  els.brandSub.textContent = `Afghanistan · ${plural(Object.keys(state.health).length || 0, "source")} · ${plural(c.total, "notice")}${when}`;
   const errors = Object.values(state.health).filter((h) => h.status === "error").length;
   els.healthLink.textContent = errors ? `Sources · ${errors} failing` : "Sources";
   els.healthLink.classList.toggle("has-errors", errors > 0);
@@ -144,7 +148,7 @@ function renderCounts() {
 
 function hasActiveFilters() {
   const p = state.params;
-  return p.typeFilter !== "all" || p.minScore > 0 || p.keywordFilter !== "all" || p.sourceFilter !== "all" || Boolean(p.searchQuery) || p.statusFilter !== "all";
+  return p.typeFilter !== "all" || p.minScore > 0 || p.keywordFilter !== "all" || p.sourceFilter !== "all" || Boolean(p.searchQuery) || p.statusFilter !== "all" || Boolean(p.showClosed);
 }
 
 function renderResults() {

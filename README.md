@@ -13,7 +13,7 @@ This repository is the extension source only. Load the `extension` folder via **
 
 ## How it works
 
-1. **Scan** fetches every enabled source in parallel (typically 5–10 seconds for all of them).
+1. **Scan** fetches every enabled source in parallel (typically 10–25 seconds for all 22; the Afghan ministry sites are the slow ones).
 2. Each notice is parsed into a common shape (title, organisation, deadline, posted date, location, summary).
 3. Expired deadlines, duplicates and notices you have already seen are dropped.
 4. The rest are scored 0–100 against built-in consulting terms (project management, M&E, HR, training, capacity building…) plus your custom keywords, target geographies and freshness.
@@ -57,13 +57,13 @@ Version 4.1 replaced the connector layer after an audit found that most of the p
 
 - **Segmented inbox**: Active, New, Saved, Dismissed with live counts.
 - **Search** across title, organisation, summary and your notes. Press `/` to focus.
-- **Filters**: type, sort (best match, deadline, recently found, source), minimum score, keyword, source.
+- **Filters**: type, sort (best match, deadline, recently found, source), minimum score, keyword, source. Closed notices are hidden unless you tick *Show closed* (saved ones always stay).
 - **Cards**: score ring, deadline urgency (due today / 3 days / 7 days), posted age, duplicate cluster size, matched keywords, private note.
 - **Actions**: save, dismiss, note, copy link, open. Every status change shows an **Undo** toast.
 - **Bulk**: select cards (or `x`), then save, dismiss or export the selection as CSV.
 - **Keyboard**: `j`/`k` move, `s` save, `d` dismiss, `o` or Enter open, `x` select, `r` scan, `e` export, Esc clear.
 - **Live scan panel** with per-source progress, elapsed time and a Stop button; partial results are kept.
-- Light and dark themes, compact and comfortable density, reduced-motion aware.
+- "Swiss data-desk" visual system: ruled rows, monospace figures, cobalt for interaction and orange only for urgency. Light and dark themes, compact and comfortable density, reduced-motion aware.
 
 ## Settings
 
