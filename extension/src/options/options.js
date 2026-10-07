@@ -1,5 +1,14 @@
 import { MSG, DEFAULT_SETTINGS } from "../lib/types.js";
 import { sanitizeUrlList, rejectedUrls, originPattern } from "../lib/urls.js";
+import { normalizeSettingsPatch } from "../lib/settings.js";
+import { send } from "../ui/messaging.js";
+import { initTheme, bindThemeToggle } from "../ui/theme.js";
+import { plural, fmtSeconds } from "../ui/format.js";
+import { healthBadgeView } from "./health-view.js";
+
+const MS_PER_SECOND = 1000;
+const MAX_REJECTED_SHOWN = 3;
+const SAMPLE_TITLE_MAX = 90;
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -17,80 +26,69 @@ let catalog = [];
 let health = {};
 let dirty = false;
 
-async function send(type, payload = {}) {
-  const res = await chrome.runtime.sendMessage({ type, payload });
-  if (!res?.ok) throw new Error(res?.error || "Request failed");
-  return res.data;
-}
-
-/* ── Theme ── */
-async function initTheme() {
-  const { os_theme } = await chrome.storage.local.get("os_theme");
-  document.documentElement.dataset.theme = os_theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-}
-els.themeToggle.addEventListener("click", () => {
-  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = next;
-  chrome.storage.local.set({ os_theme: next });
-});
-
 /* ── Helpers ── */
 const lines = (text) => String(text || "").split("\n").map((l) => l.trim()).filter(Boolean);
-const clamp = (v, min, max, fallback) => { const n = Number(v); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback; };
-function timeAgo(iso) {
-  if (!iso) return "";
-  const mins = Math.floor((Date.now() - Date.parse(iso)) / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (mins < 1440) return `${Math.floor(mins / 60)}h ago`;
-  return `${Math.floor(mins / 1440)}d ago`;
-}
+const secondsToMs = (value) => (String(value).trim() === "" ? null : Number(value) * MS_PER_SECOND);
 function setStatus(text, cls = "") { els.saveStatus.textContent = text; els.saveStatus.className = `save-status ${cls}`.trim(); }
 function markDirty() { if (!dirty) { dirty = true; setStatus("Unsaved changes", "is-dirty"); } }
 
+bindThemeToggle(els.themeToggle, { onError: (e) => setStatus(`Could not save theme: ${e.message}`, "is-err") });
+
 /* ── Sources ── */
-function healthBadge(el, id, settings) {
-  const c = catalog.find((x) => x.id === id);
-  const h = health[id];
-  el.className = "health";
-  if (c?.requiresSetting && !String(settings[c.requiresSetting] || "").trim()) { el.classList.add("is-needs"); el.textContent = "needs appname"; el.title = "Add the ReliefWeb appname above"; return; }
-  if (!h) { el.textContent = "not scanned yet"; el.title = ""; return; }
-  el.classList.add(`is-${h.status}`);
-  el.textContent = h.status === "ok" ? `${h.count} item${h.count === 1 ? "" : "s"} · ${(h.ms / 1000).toFixed(1)}s · ${timeAgo(h.at)}`
-    : h.status === "empty" ? `0 items · ${timeAgo(h.at)}`
-    : `failed · ${timeAgo(h.at)}`;
-  el.title = h.error || `Last checked ${new Date(h.at).toLocaleString()}`;
+function applyHealthBadge(el, id, settings) {
+  const view = healthBadgeView(health[id], catalog.find((x) => x.id === id), settings);
+  el.className = view.cls;
+  el.textContent = view.text;
+  el.title = view.title;
+}
+
+function groupHeading(group) {
+  const heading = document.createElement("li");
+  heading.className = "source-group";
+  heading.textContent = group;
+  return heading;
+}
+
+function buildSourceRow(c, enabled, settings) {
+  const row = rowTemplate.content.firstElementChild.cloneNode(true);
+  row.dataset.id = c.id;
+  const check = row.querySelector(".source-check");
+  check.checked = enabled.has(c.id);
+  row.classList.toggle("is-off", !check.checked);
+  check.addEventListener("change", () => { row.classList.toggle("is-off", !check.checked); markDirty(); });
+  row.querySelector(".source-label").textContent = c.label;
+  row.querySelector(".source-desc").textContent = c.description;
+  const home = row.querySelector(".source-home");
+  home.href = c.homepage; home.textContent = new URL(c.homepage).hostname.replace(/^www\./, "");
+  applyHealthBadge(row.querySelector(".health"), c.id, settings);
+  const result = row.querySelector(".source-result");
+  if (health[c.id]?.status === "error") { result.textContent = health[c.id].error; result.className = "source-result is-err"; }
+  row.querySelector(".source-test").addEventListener("click", () => testSource(c.id, row));
+  return row;
 }
 
 function renderSources(settings) {
-  els.sourceList.replaceChildren();
   const enabled = new Set(settings.enabledSources || []);
+  const nodes = [];
   let lastGroup = null;
   for (const c of catalog) {
-    if (c.group !== lastGroup) {
-      const heading = document.createElement("li");
-      heading.className = "source-group";
-      heading.textContent = c.group;
-      els.sourceList.appendChild(heading);
-      lastGroup = c.group;
-    }
-    const row = rowTemplate.content.firstElementChild.cloneNode(true);
-    row.dataset.id = c.id;
-    const check = row.querySelector(".source-check");
-    check.checked = enabled.has(c.id);
-    row.classList.toggle("is-off", !check.checked);
-    check.addEventListener("change", () => { row.classList.toggle("is-off", !check.checked); markDirty(); });
-    row.querySelector(".source-label").textContent = c.label;
-    row.querySelector(".source-desc").textContent = c.description;
-    const home = row.querySelector(".source-home");
-    home.href = c.homepage; home.textContent = new URL(c.homepage).hostname.replace(/^www\./, "");
-    healthBadge(row.querySelector(".health"), c.id, settings);
-    const result = row.querySelector(".source-result");
-    if (health[c.id]?.status === "error") { result.textContent = health[c.id].error; result.className = "source-result is-err"; }
-    row.querySelector(".source-test").addEventListener("click", () => testSource(c.id, row));
-    els.sourceList.appendChild(row);
+    if (c.group !== lastGroup) { nodes.push(groupHeading(c.group)); lastGroup = c.group; }
+    nodes.push(buildSourceRow(c, enabled, settings));
   }
+  els.sourceList.replaceChildren(...nodes);
   els.sourceList.setAttribute("aria-busy", "false");
+}
+
+function showTestResult(result, data) {
+  if (data.health.status === "error") { result.className = "source-result is-err"; result.textContent = data.health.error; return; }
+  result.className = "source-result is-ok";
+  result.textContent = data.health.count
+    ? `Fetched ${plural(data.health.count, "item")} in ${fmtSeconds(data.health.ms)}. Latest:`
+    : "Reachable, but no items were found on the page (layout may have changed).";
+  if (!data.sample.length) return;
+  const ul = document.createElement("ul");
+  for (const s of data.sample) { const li = document.createElement("li"); li.textContent = s.title.slice(0, SAMPLE_TITLE_MAX); ul.appendChild(li); }
+  result.appendChild(ul);
 }
 
 async function testSource(id, row) {
@@ -101,18 +99,9 @@ async function testSource(id, row) {
   try {
     if (dirty) await saveSettings({ quiet: true });
     const data = await send(MSG.TEST_SOURCE, { id });
-    health[id] = data.health;
-    healthBadge(row.querySelector(".health"), id, await send(MSG.GET_SETTINGS));
-    if (data.health.status === "error") { result.className = "source-result is-err"; result.textContent = data.health.error; }
-    else {
-      result.className = "source-result is-ok";
-      result.textContent = data.health.count ? `Fetched ${data.health.count} items in ${(data.health.ms / 1000).toFixed(1)}s. Latest:` : "Reachable, but no items were found on the page (layout may have changed).";
-      if (data.sample.length) {
-        const ul = document.createElement("ul");
-        for (const s of data.sample) { const li = document.createElement("li"); li.textContent = s.title.slice(0, 90); ul.appendChild(li); }
-        result.appendChild(ul);
-      }
-    }
+    health = { ...health, [id]: data.health };
+    applyHealthBadge(row.querySelector(".health"), id, collect());
+    showTestResult(result, data);
   } catch (e) { result.className = "source-result is-err"; result.textContent = e.message; }
   finally { btn.disabled = false; btn.textContent = "Test"; }
 }
@@ -120,20 +109,15 @@ async function testSource(id, row) {
 /* ── Validation ── */
 function validateUrlField(textarea, hint) {
   const bad = rejectedUrls(lines(textarea.value));
-  hint.textContent = bad.length ? `Ignored ${bad.length} line${bad.length > 1 ? "s" : ""} (must be https:// public URLs): ${bad.slice(0, 3).join(", ")}${bad.length > 3 ? "…" : ""}` : "";
+  const shown = `${bad.slice(0, MAX_REJECTED_SHOWN).join(", ")}${bad.length > MAX_REJECTED_SHOWN ? "…" : ""}`;
+  hint.textContent = bad.length ? `Ignored ${plural(bad.length, "line")} (must be https:// public URLs): ${shown}` : "";
   hint.className = bad.length ? "hint is-warn" : "hint";
 }
 els.customSourceUrls.addEventListener("input", () => validateUrlField(els.customSourceUrls, els.customSourceUrlsHint));
 els.manualLinks.addEventListener("input", () => validateUrlField(els.manualLinks, els.manualLinksHint));
 
 /* ── Load / save ── */
-async function load() {
-  els.version.textContent = `v${chrome.runtime.getManifest().version}`;
-  await initTheme();
-  const [settings, connectors, h, dashboard] = await Promise.all([
-    send(MSG.GET_SETTINGS), send(MSG.GET_CONNECTORS), send(MSG.GET_SOURCE_HEALTH), send(MSG.GET_DASHBOARD, { statusFilter: "all" }).catch(() => null)
-  ]);
-  catalog = connectors; health = h;
+function fillForm(settings) {
   els.reliefwebAppName.value = settings.reliefwebAppName || "";
   els.customKeywords.value = (settings.customKeywords || []).join("\n");
   els.targetGeographies.value = (settings.targetGeographies || []).join(", ");
@@ -143,8 +127,19 @@ async function load() {
   els.customSourceUrls.value = (settings.customSourceUrls || []).join("\n");
   els.manualLinks.value = (settings.manualLinks || []).join("\n");
   els.scanIntervalHours.value = settings.scanIntervalHours;
-  els.fetchTimeoutSec.value = Math.round((settings.fetchTimeoutMs || 25000) / 1000);
+  els.fetchTimeoutSec.value = Math.round((settings.fetchTimeoutMs || DEFAULT_SETTINGS.fetchTimeoutMs) / MS_PER_SECOND);
   els.maxConcurrentFetches.value = settings.maxConcurrentFetches;
+}
+
+async function load() {
+  els.version.textContent = `v${chrome.runtime.getManifest().version}`;
+  await initTheme();
+  const [settings, connectors, h, dashboard] = await Promise.all([
+    send(MSG.GET_SETTINGS), send(MSG.GET_CONNECTORS), send(MSG.GET_SOURCE_HEALTH),
+    send(MSG.GET_DASHBOARD, { statusFilter: "all" }).catch(() => null) // the summary line is optional
+  ]);
+  catalog = connectors; health = h;
+  fillForm(settings);
   renderSources(settings);
   validateUrlField(els.customSourceUrls, els.customSourceUrlsHint);
   validateUrlField(els.manualLinks, els.manualLinksHint);
@@ -152,22 +147,23 @@ async function load() {
   dirty = false; setStatus("All changes saved");
 }
 
+/** Read the form into a validated settings patch (same rules the service worker enforces). */
 function collect() {
   const enabledSources = [...els.sourceList.querySelectorAll(".source-row")].filter((r) => r.querySelector(".source-check").checked).map((r) => r.dataset.id);
-  return {
-    reliefwebAppName: els.reliefwebAppName.value.trim(),
-    enabledSources: enabledSources.length ? enabledSources : [...DEFAULT_SETTINGS.enabledSources],
-    customKeywords: lines(els.customKeywords.value).map((k) => k.toLowerCase()),
-    targetGeographies: els.targetGeographies.value.split(",").map((v) => v.trim().toLowerCase()).filter(Boolean),
-    minScore: clamp(els.minScore.value, 0, 100, DEFAULT_SETTINGS.minScore),
-    highPriorityThreshold: clamp(els.highPriorityThreshold.value, 50, 100, DEFAULT_SETTINGS.highPriorityThreshold),
+  return normalizeSettingsPatch({
+    reliefwebAppName: els.reliefwebAppName.value,
+    enabledSources,
+    customKeywords: lines(els.customKeywords.value),
+    targetGeographies: els.targetGeographies.value.split(","),
+    minScore: els.minScore.value,
+    highPriorityThreshold: els.highPriorityThreshold.value,
     notificationsEnabled: els.notificationsEnabled.checked,
-    customSourceUrls: sanitizeUrlList(lines(els.customSourceUrls.value)),
-    manualLinks: sanitizeUrlList(lines(els.manualLinks.value)),
-    scanIntervalHours: clamp(els.scanIntervalHours.value, 1, 48, DEFAULT_SETTINGS.scanIntervalHours),
-    fetchTimeoutMs: clamp(els.fetchTimeoutSec.value, 5, 60, 25) * 1000,
-    maxConcurrentFetches: clamp(els.maxConcurrentFetches.value, 1, 8, DEFAULT_SETTINGS.maxConcurrentFetches)
-  };
+    customSourceUrls: lines(els.customSourceUrls.value),
+    manualLinks: lines(els.manualLinks.value),
+    scanIntervalHours: els.scanIntervalHours.value,
+    fetchTimeoutMs: secondsToMs(els.fetchTimeoutSec.value),
+    maxConcurrentFetches: els.maxConcurrentFetches.value
+  });
 }
 
 /**
@@ -181,15 +177,29 @@ function requestOriginsSync(urls) {
   return chrome.permissions.request({ origins }).then((granted) => ({ origins, granted }));
 }
 
+/** Drop optional host grants that no saved custom URL needs any more (manifest origins are never touched). */
+async function revokeUnusedOrigins(saved) {
+  try {
+    const needed = new Set([...(saved.customSourceUrls || []), ...(saved.manualLinks || [])].map(originPattern).filter(Boolean));
+    const manifest = new Set(chrome.runtime.getManifest().host_permissions || []);
+    const { origins = [] } = await chrome.permissions.getAll();
+    const stale = origins.filter((o) => !manifest.has(o) && !needed.has(o) && o !== "https://*/*");
+    if (stale.length) await chrome.permissions.remove({ origins: stale });
+  } catch (e) {
+    setStatus(`Saved; could not tidy site permissions: ${e.message}`, "is-err");
+  }
+}
+
 async function saveSettings({ quiet = false, permissionPromise = null } = {}) {
-  const settings = collect();
+  const patch = collect();
   const perm = permissionPromise ? await permissionPromise : null;
-  await send(MSG.SAVE_SETTINGS, settings);
+  const saved = await send(MSG.SAVE_SETTINGS, patch);
   dirty = false;
+  await revokeUnusedOrigins(saved);
   if (quiet) return;
   if (perm && !perm.granted) setStatus("Saved, but site permission was declined: custom URLs will fail", "is-err");
   else setStatus("Saved", "is-ok");
-  renderSources(settings);
+  renderSources(saved);
 }
 
 els.saveBtn.addEventListener("click", () => {
@@ -216,10 +226,14 @@ els.scanNow.addEventListener("click", async () => {
 
 els.clearBtn.addEventListener("click", async () => {
   if (!confirm("Delete every stored opportunity, note, scan log and source health record? Settings are kept.")) return;
-  await send(MSG.CLEAR_DATA);
-  health = {};
-  await load();
-  setStatus("All data deleted", "is-ok");
+  try {
+    await send(MSG.CLEAR_DATA);
+    health = {};
+    await load();
+    setStatus("All data deleted", "is-ok");
+  } catch (e) {
+    setStatus(`Delete failed: ${e.message}`, "is-err");
+  }
 });
 
 load().catch((e) => setStatus(`Could not load settings: ${e.message}`, "is-err"));

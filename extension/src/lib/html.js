@@ -1,4 +1,11 @@
-/** Lightweight HTML text utilities for regex-based scraping (no DOM available in service workers). */
+/**
+ * Lightweight HTML text utilities for regex-based scraping (no DOM available in service workers).
+ *
+ * Every helper here runs in linear time on hostile input. The rule: an opening-tag regex may only use
+ * `[^<>]` (never `[^>]` or `[\s\S]*?`) for attributes, and the matching closing tag is always located
+ * with indexOf. Lazy `[\s\S]*?</tag>` spans are quadratic when a page contains many openers and no
+ * closer, which is enough for one malicious source to freeze the service worker for minutes.
+ */
 
 const NAMED_ENTITIES = {
   amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
@@ -18,38 +25,106 @@ function safeFromCodePoint(cp) {
   catch { return ""; }
 }
 
-/** Remove tags, scripts, styles and decode entities, collapsing whitespace. */
-export function stripHtml(html) {
-  return decodeEntities(
-    String(html ?? "")
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<!--[\s\S]*?-->/g, " ")
-      .replace(/<br\s*\/?>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-  ).replace(/\s+/g, " ").trim();
-}
-
-export function textBetween(re, html, fallback = "") {
-  const m = String(html ?? "").match(re);
-  return m?.[1] ? stripHtml(m[1]).slice(0, 400) : fallback;
-}
-
-export function metaContent(html, key) {
+/** Remove every span from `open` to `close` (case-insensitive literals), replacing it with a space. O(n). */
+export function stripBetween(html, open, close) {
   const src = String(html ?? "");
-  const esc = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return (
-    src.match(new RegExp(`<meta[^>]+property=["']${esc}["'][^>]+content=["']([^"']+)["']`, "i"))?.[1] ||
-    src.match(new RegExp(`<meta[^>]+name=["']${esc}["'][^>]+content=["']([^"']+)["']`, "i"))?.[1] ||
-    src.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${esc}["']`, "i"))?.[1] ||
-    ""
-  );
+  const low = src.toLowerCase();
+  const openLow = open.toLowerCase();
+  const closeLow = close.toLowerCase();
+  let out = "";
+  let i = 0;
+  for (;;) {
+    const s = low.indexOf(openLow, i);
+    if (s === -1) return out + src.slice(i);
+    const e = low.indexOf(closeLow, s + openLow.length);
+    if (e === -1) return out + src.slice(i, s);
+    out += `${src.slice(i, s)} `;
+    i = e + closeLow.length;
+  }
 }
 
-/** Split an HTML document into blocks that start with the given opening-tag marker regex. */
+function globalCopy(re) {
+  return new RegExp(re.source, `${re.flags.replace(/[gy]/g, "")}g`);
+}
+
+/**
+ * Find elements whose opening tag matches `openRe` (which must bound attributes with `[^<>]`) and whose
+ * closing tag is the literal `closeTag`. Non-overlapping, case-insensitive on the closer, O(n).
+ * Each result: { attrs (first capture group or ""), inner, outer, start, end }.
+ */
+export function allElements(html, openRe, closeTag, { first = false } = {}) {
+  const src = String(html ?? "");
+  const low = src.toLowerCase();
+  const closeLow = closeTag.toLowerCase();
+  const re = globalCopy(openRe);
+  const out = [];
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    const openEnd = m.index + m[0].length;
+    const closeAt = low.indexOf(closeLow, openEnd);
+    if (closeAt === -1) break; // no closer anywhere after this opener, so no later opener can match either
+    const end = closeAt + closeTag.length;
+    out.push({ attrs: m[1] ?? "", inner: src.slice(openEnd, closeAt), outer: src.slice(m.index, end), start: m.index, end });
+    if (first) break;
+    re.lastIndex = Math.max(end, re.lastIndex);
+  }
+  return out;
+}
+
+/** First element matching openRe/closeTag, or null. */
+export function firstElement(html, openRe, closeTag) {
+  return allElements(html, openRe, closeTag, { first: true })[0] ?? null;
+}
+
+/** Inner HTML of the first element matching openRe/closeTag, or "". */
+export function innerOf(html, openRe, closeTag) {
+  return firstElement(html, openRe, closeTag)?.inner ?? "";
+}
+
+/** Text content (tags stripped, entities decoded, capped) of the first element, or the fallback. */
+export function textOf(html, openRe, closeTag, fallback = "", max = 400) {
+  const inner = innerOf(html, openRe, closeTag);
+  const text = inner ? stripHtml(inner).slice(0, max) : "";
+  return text || fallback;
+}
+
+/** Remove tags, scripts, styles and comments, decode entities, collapse whitespace. O(n). */
+export function stripHtml(html) {
+  let s = String(html ?? "");
+  s = stripBetween(s, "<script", "</script>");
+  s = stripBetween(s, "<style", "</style>");
+  s = stripBetween(s, "<!--", "-->");
+  s = s.replace(/<br\s*\/?>/gi, " ").replace(/<[^<>]+>/g, " ");
+  return decodeEntities(s).replace(/\s+/g, " ").trim();
+}
+
+/** Value of an attribute inside an attribute string (quoted with " or '), or "". */
+export function attrValue(attrs, name) {
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = String(attrs ?? "").match(new RegExp(`(?:^|\\s)${esc}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"));
+  return m ? (m[1] ?? m[2] ?? "") : "";
+}
+
+/** Content of <meta property=key> or <meta name=key>, scanning each meta tag once. O(n). */
+export function metaContent(html, key) {
+  const wanted = String(key).toLowerCase();
+  const re = /<meta\b([^<>]*)>/gi;
+  const src = String(html ?? "");
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    const attrs = m[1];
+    const id = attrValue(attrs, "property") || attrValue(attrs, "name");
+    if (id.toLowerCase() !== wanted) continue;
+    const content = attrValue(attrs, "content");
+    if (content) return content;
+  }
+  return "";
+}
+
+/** Split an HTML document into blocks that start with the given opening-tag marker regex (`[^<>]`-bounded). */
 export function splitBlocks(html, markerRe) {
   const src = String(html ?? "");
-  const re = new RegExp(markerRe.source, markerRe.flags.includes("g") ? markerRe.flags : `${markerRe.flags}g`);
+  const re = globalCopy(markerRe);
   const starts = [];
   let m;
   while ((m = re.exec(src)) !== null) {
@@ -59,16 +134,13 @@ export function splitBlocks(html, markerRe) {
   return starts.map((s, i) => src.slice(s, starts[i + 1] ?? src.length));
 }
 
-/** Iterate anchor tags; yields { href, inner, tag } objects. */
+/** Anchor tags with an href; yields { href, inner, attrs }. O(n). */
 export function anchors(html) {
   const out = [];
-  const re = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
-  const src = String(html ?? "");
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    const href = m[1].match(/href\s*=\s*["']([^"']*)["']/i)?.[1];
+  for (const el of allElements(html, /<a\b([^<>]*)>/gi, "</a>")) {
+    const href = attrValue(el.attrs, "href");
     if (!href) continue;
-    out.push({ href: decodeEntities(href.trim()), inner: m[2], attrs: m[1] });
+    out.push({ href: decodeEntities(href.trim()), inner: el.inner, attrs: el.attrs });
   }
   return out;
 }

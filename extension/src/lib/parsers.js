@@ -1,6 +1,18 @@
 import { resolveHttpUrl } from "./urls.js";
-import { stripHtml, textBetween, metaContent, anchors, extractAfghanLocation, decodeEntities } from "./html.js";
+import { stripHtml, textOf, metaContent, anchors, extractAfghanLocation, decodeEntities } from "./html.js";
 import { normalizeDate } from "./dates.js";
+import { OPPORTUNITY_TYPES } from "./types.js";
+
+const LISTING_LIMIT = 40;
+const MIN_LINK_TEXT = 15;
+const MAX_LINK_TEXT = 300;
+const TITLE_MAX = 200;
+const LISTING_SUMMARY_MAX = 400;
+const PAGE_SUMMARY_MAX = 600;
+const LISTING_CONFIDENCE = 0.5;
+/** Manual links on sites whose pages we know are well structured get a higher parser confidence. */
+const MANUAL_PAGE_CONFIDENCE = Object.freeze({ "reliefweb.int": 0.9, "ungm.org": 0.88 });
+const DEFAULT_PAGE_CONFIDENCE = 0.55;
 
 const DEADLINE_RE = /(deadline|closing date|closing|due date|submission date|submission deadline|apply before|expires?)\s*[:\-–]?\s*([a-z0-9,\-\/.: ]{6,40})/i;
 const POSTED_RE = /(posted on|posted|publication date|published on|published|date posted|issued on)\s*[:\-–]?\s*([a-z0-9,\-\/.: ]{6,40})/i;
@@ -20,9 +32,10 @@ const SKIP_EXT = /\.(png|jpe?g|gif|svg|webp|ico|css|js|mp4|mp3|zip|rar)(\?|$)/i;
 
 /**
  * Generic listing parser for user-supplied listing pages: collect link texts that look like notice titles.
- * Returns at most `limit` items to bound noise.
+ * Returns at most `limit` items to bound noise; sourceDomain is the listing page's hostname.
  */
-export function parseHtmlListingPage(html, baseUrl, sourceDomain, sourceType = "other", limit = 40) {
+export function parseHtmlListingPage(html, baseUrl, { sourceType = OPPORTUNITY_TYPES.OTHER, limit = LISTING_LIMIT } = {}) {
+  const sourceDomain = new URL(baseUrl).hostname;
   const items = [];
   const seen = new Set();
   const base = resolveHttpUrl(baseUrl, baseUrl) || baseUrl;
@@ -30,14 +43,13 @@ export function parseHtmlListingPage(html, baseUrl, sourceDomain, sourceType = "
     const href = resolveHttpUrl(a.href, baseUrl);
     if (!href || href === base || href === `${base}/` || SKIP_EXT.test(href)) continue;
     const txt = stripHtml(a.inner);
-    if (txt.length < 15 || txt.length > 300 || NAV_NOISE.test(txt)) continue;
+    if (txt.length < MIN_LINK_TEXT || txt.length > MAX_LINK_TEXT || NAV_NOISE.test(txt)) continue;
     if (seen.has(href)) continue;
     seen.add(href);
-    const deadline = extractDeadline(txt);
     items.push({
-      title: txt.slice(0, 200), organization: "", type: sourceType,
-      location: extractAfghanLocation(txt), deadline, postedDate: null,
-      url: href, sourceDomain, summary: txt.slice(0, 400), parserConfidence: 0.5,
+      title: txt.slice(0, TITLE_MAX), organization: "", type: sourceType,
+      location: extractAfghanLocation(txt), deadline: extractDeadline(txt), postedDate: null,
+      url: href, sourceDomain, summary: txt.slice(0, LISTING_SUMMARY_MAX), parserConfidence: LISTING_CONFIDENCE,
       parserSource: `listing:${sourceDomain}`
     });
     if (items.length >= limit) break;
@@ -45,22 +57,26 @@ export function parseHtmlListingPage(html, baseUrl, sourceDomain, sourceType = "
   return items;
 }
 
+function manualPageConfidence(host) {
+  const known = Object.entries(MANUAL_PAGE_CONFIDENCE).find(([domain]) => host.includes(domain));
+  return known ? known[1] : DEFAULT_PAGE_CONFIDENCE;
+}
+
 /** Parse a single opportunity page the user pasted as a manual link. */
 export function parseOpportunityPage(html, url) {
   const host = new URL(url).hostname.toLowerCase();
-  const confidence = host.includes("reliefweb.int") ? 0.9 : host.includes("ungm.org") ? 0.88 : 0.55;
   const body = stripHtml(html);
   const title = decodeEntities(
     metaContent(html, "og:title") ||
-    textBetween(/<h1[^>]*>([\s\S]*?)<\/h1>/i, html, "") ||
-    textBetween(/<title[^>]*>([\s\S]*?)<\/title>/i, html, "Untitled")
-  ).slice(0, 200);
-  const summary = decodeEntities(metaContent(html, "description") || body.slice(0, 600)).slice(0, 600);
+    textOf(html, /<h1[^<>]*>/i, "</h1>") ||
+    textOf(html, /<title[^<>]*>/i, "</title>", "Untitled")
+  ).slice(0, TITLE_MAX);
+  const summary = decodeEntities(metaContent(html, "description") || body.slice(0, PAGE_SUMMARY_MAX)).slice(0, PAGE_SUMMARY_MAX);
   const org = body.match(/(?:organization|organisation|agency|borrower|employer)\s*[:\-–]\s*([a-z0-9,&.\- ]{3,100})/i)?.[1]?.trim() || "";
   return {
-    title, organization: org, type: "other", location: extractAfghanLocation(body),
+    title, organization: org, type: OPPORTUNITY_TYPES.OTHER, location: extractAfghanLocation(body),
     deadline: extractDeadline(body), postedDate: extractPostedDate(body),
-    url, sourceDomain: host, summary, parserConfidence: confidence,
+    url, sourceDomain: host, summary, parserConfidence: manualPageConfidence(host),
     parserSource: "page:manual"
   };
 }

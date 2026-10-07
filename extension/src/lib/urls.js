@@ -6,17 +6,45 @@ function ipv4Parts(hostname) {
   return parts;
 }
 
+const PRIVATE_NAME_SUFFIXES = [".localhost", ".local", ".internal", ".home.arpa", ".lan"];
+
+/** Expand an IPv6 literal (without brackets) to eight 16-bit groups, or null when malformed. */
+export function expandIpv6(bare) {
+  const h = String(bare || "").toLowerCase();
+  if (!/^[0-9a-f:.]+$/.test(h) || h.split("::").length > 2) return null;
+  const toGroups = (part) => (part ? part.split(":") : []).flatMap((g) => {
+    if (g.includes(".")) { const v4 = ipv4Parts(g); return v4 ? [(v4[0] << 8) | v4[1], (v4[2] << 8) | v4[3]] : [NaN]; }
+    return [g.length >= 1 && g.length <= 4 ? parseInt(g, 16) : NaN];
+  });
+  const [left, right] = h.split("::");
+  const L = toGroups(left);
+  const R = h.includes("::") ? toGroups(right) : [];
+  const missing = 8 - L.length - R.length;
+  if (missing < 0 || (!h.includes("::") && missing !== 0) || (h.includes("::") && missing < 1)) return null;
+  const groups = [...L, ...Array(missing).fill(0), ...R];
+  return groups.some((g) => Number.isNaN(g) || g < 0 || g > 0xffff) ? null : groups;
+}
+
+function v4FromGroups(hi, lo) { return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`; }
+
+/** Loopback, unspecified, link-local, unique-local, and IPv4-embedded forms (mapped, NAT64, 6to4) of private ranges. */
+export function isPrivateIpv6(bare) {
+  const p = expandIpv6(bare);
+  if (!p) return true; // unparseable literal: treat as unsafe
+  const leading = (n) => p.slice(0, n).every((g) => g === 0);
+  if (leading(7) && p[7] <= 1) return true;                                       // :: and ::1
+  if (leading(5) && p[5] === 0xffff) return isPrivateHostname(v4FromGroups(p[6], p[7])); // ::ffff:a.b.c.d
+  if (p[0] === 0x64 && p[1] === 0xff9b && p.slice(2, 6).every((g) => g === 0)) return isPrivateHostname(v4FromGroups(p[6], p[7])); // NAT64 64:ff9b::/96
+  if (p[0] === 0x2002) return isPrivateHostname(v4FromGroups(p[1], p[2]));         // 6to4
+  if ((p[0] & 0xffc0) === 0xfe80 || (p[0] & 0xfe00) === 0xfc00 || p[0] === 0) return true; // link-local, ULA, ::/8
+  return false;
+}
+
 export function isPrivateHostname(hostname) {
   const h = String(hostname || "").toLowerCase().replace(/\.$/, "");
   if (!h) return true;
-  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h === "0.0.0.0") return true;
-  if (h === "::1" || h === "[::1]") return true;
-  if (h.includes(":")) {
-    const bare = h.replace(/^\[|\]$/g, "");
-    if (bare === "::1" || bare.startsWith("fe80:") || bare.startsWith("fc") || bare.startsWith("fd")) return true;
-    const mapped = bare.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
-    if (mapped) return isPrivateHostname(mapped[1]);
-  }
+  if (h === "localhost" || h === "0.0.0.0" || PRIVATE_NAME_SUFFIXES.some((suffix) => h.endsWith(suffix))) return true;
+  if (h.startsWith("[") || h.includes(":")) return isPrivateIpv6(h.replace(/^\[|\]$/g, ""));
   const v4 = ipv4Parts(h);
   if (!v4) return false;
   const [a, b] = v4;

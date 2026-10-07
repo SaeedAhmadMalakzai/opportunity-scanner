@@ -2,10 +2,10 @@
 import { ITEM_STATUS } from "./types.js";
 import { canonicalUrl, isSafeHttpsUrl } from "./urls.js";
 import { isExpired, ageInDays } from "./dates.js";
+import { scoreOpportunity } from "./matcher.js";
 
 /** Notices with no deadline are assumed closed once their posting is this old. */
 export const MAX_UNDATED_AGE_DAYS = 180;
-import { scoreOpportunity } from "./matcher.js";
 
 /** cyrb53: fast 53-bit string hash with far fewer collisions than a 32-bit djb2. */
 export function hashString(str, seed = 0) {
@@ -30,23 +30,29 @@ export function clusterKey(title) {
     .trim().split(" ").filter((w) => w.length > 2).sort().slice(0, 6).join("-");
 }
 
+/** Highest-scoring member of each cluster; ties go to the earliest item. */
+function bestByCluster(keyed) {
+  const best = new Map();
+  for (const { it, cid } of keyed) {
+    if (!cid) continue;
+    const current = best.get(cid);
+    if (!current || (it.score || 0) > (current.score || 0)) best.set(cid, it);
+  }
+  return best;
+}
+
 /** Returns a new array of items annotated with clusterId / clusterSize / isClusterPrimary. */
 export function assignClusters(items) {
-  const groups = new Map();
   const keyed = items.map((it) => {
     const k = clusterKey(it.title);
-    const cid = k ? `cl_${hashString(k)}` : null;
-    if (cid) {
-      if (!groups.has(cid)) groups.set(cid, []);
-      groups.get(cid).push(it);
-    }
-    return { it, cid };
+    return { it, cid: k ? `cl_${hashString(k)}` : null };
   });
+  const sizes = new Map();
+  for (const { cid } of keyed) if (cid) sizes.set(cid, (sizes.get(cid) || 0) + 1);
+  const best = bestByCluster(keyed);
   return keyed.map(({ it, cid }) => {
     if (!cid) return { ...it, clusterId: null, clusterSize: 1, isClusterPrimary: true };
-    const g = groups.get(cid);
-    const best = g.reduce((a, b) => ((a.score || 0) >= (b.score || 0) ? a : b));
-    return { ...it, clusterId: cid, clusterSize: g.length, isClusterPrimary: it === best };
+    return { ...it, clusterId: cid, clusterSize: sizes.get(cid), isClusterPrimary: it === best.get(cid) };
   });
 }
 
@@ -54,18 +60,49 @@ export function assignClusters(items) {
  * Turn raw connector output into scored, de-duplicated, non-expired opportunities.
  * @returns {{ items: object[], stats: { expired: number, duplicates: number, belowScore: number, unsafe: number } }}
  */
+const FIELD_CAPS = Object.freeze({ title: 200, organization: 160, location: 80, summary: 600, url: 2048, type: 20, sourceDomain: 100, parserSource: 60, externalRef: 64, date: 40 });
+
+function cappedString(value, max) {
+  return String(value ?? "").trim().slice(0, max);
+}
+
+/**
+ * Allow-list and cap every field a connector produced before it is scored or persisted. Scraped pages are
+ * untrusted: an unbounded title would otherwise be stored verbatim and could exhaust the storage quota.
+ */
+export function normalizeRawItem(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const confidence = Number(raw.parserConfidence);
+  return {
+    title: cappedString(raw.title, FIELD_CAPS.title),
+    organization: cappedString(raw.organization, FIELD_CAPS.organization),
+    location: cappedString(raw.location, FIELD_CAPS.location),
+    summary: cappedString(raw.summary, FIELD_CAPS.summary),
+    url: cappedString(raw.url, FIELD_CAPS.url),
+    type: cappedString(raw.type, FIELD_CAPS.type),
+    sourceDomain: cappedString(raw.sourceDomain, FIELD_CAPS.sourceDomain),
+    parserSource: cappedString(raw.parserSource, FIELD_CAPS.parserSource),
+    deadline: typeof raw.deadline === "string" ? raw.deadline.slice(0, FIELD_CAPS.date) : null,
+    postedDate: typeof raw.postedDate === "string" ? raw.postedDate.slice(0, FIELD_CAPS.date) : null,
+    parserConfidence: Number.isFinite(confidence) ? confidence : 0.5,
+    externalRef: raw.externalRef ? cappedString(raw.externalRef, FIELD_CAPS.externalRef) : null,
+    offTarget: Boolean(raw.offTarget)
+  };
+}
+
 export function processRawItems(rawItems, settings, seenUrls = {}, now = Date.now()) {
   const stats = { expired: 0, duplicates: 0, belowScore: 0, unsafe: 0, seen: 0 };
   const batchSeen = new Set();
   const out = [];
-  for (const raw of rawItems) {
-    if (!raw?.url || !isSafeHttpsUrl(raw.url) || !String(raw.title || "").trim()) { stats.unsafe++; continue; }
+  for (const unchecked of rawItems) {
+    const raw = normalizeRawItem(unchecked);
+    if (!raw?.url || !isSafeHttpsUrl(raw.url) || !raw.title) { stats.unsafe++; continue; }
     if (isExpired(raw.deadline, now)) { stats.expired++; continue; }
     if (!raw.deadline && (ageInDays(raw.postedDate, now) ?? 0) > MAX_UNDATED_AGE_DAYS) { stats.expired++; continue; }
     const canon = canonicalUrl(raw.url);
     if (batchSeen.has(canon)) { stats.duplicates++; continue; }
     batchSeen.add(canon);
-    if (seenUrls[canon]) { stats.seen++; continue; }
+    if (Object.hasOwn(seenUrls, canon)) { stats.seen++; continue; }
     const scored = scoreOpportunity(raw, settings, now);
     if (scored.score < (settings.minScore || 0)) { stats.belowScore++; continue; }
     out.push({ ...scored, id: itemId(canon, scored.title), canonicalUrl: canon });
@@ -109,7 +146,7 @@ export function filterAndSort(items, params = {}) {
   const srcf = params.sourceFilter || "all";
   const sq = String(params.searchQuery || "").toLowerCase().trim();
   const showClosed = Boolean(params.showClosed);
-  const sorter = SORTERS[params.sortBy] || SORTERS.score;
+  const sorter = Object.hasOwn(SORTERS, String(params.sortBy)) ? SORTERS[params.sortBy] : SORTERS.score;
 
   const filtered = items.filter((it) => {
     if ((it.score || 0) < min) return false;
@@ -135,4 +172,22 @@ export function countByStatus(items) {
     else if (it.status === ITEM_STATUS.DISMISSED) counts.dismissed++;
   }
   return counts;
+}
+
+function countsDescending(map) {
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([value, count]) => ({ value, count }));
+}
+
+/** Keyword and source facets (with counts) over every non-dismissed item, most common first. */
+export function collectFacets(items) {
+  const keywords = new Map();
+  const sources = new Map();
+  for (const it of items) {
+    if (it.status === ITEM_STATUS.DISMISSED) continue;
+    for (const k of it.matchedKeywords || []) keywords.set(k, (keywords.get(k) || 0) + 1);
+    if (it.sourceDomain) sources.set(it.sourceDomain, (sources.get(it.sourceDomain) || 0) + 1);
+  }
+  return { keywords: countsDescending(keywords), sources: countsDescending(sources) };
 }

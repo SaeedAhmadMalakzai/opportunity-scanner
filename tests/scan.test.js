@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { hashString, itemId, assignClusters, processRawItems, toCsv, csvEscape, filterAndSort, countByStatus } from "../extension/src/lib/scan.js";
+import { hashString, itemId, assignClusters, processRawItems, toCsv, csvEscape, filterAndSort, countByStatus, collectFacets } from "../extension/src/lib/scan.js";
 
 test("hashString is stable and distinguishes near-identical strings", () => {
   assert.equal(hashString("abc"), hashString("abc"));
@@ -104,4 +104,22 @@ test("filterAndSort hides closed notices unless showClosed or the item is saved"
 
 test("countByStatus", () => {
   assert.deepEqual(countByStatus(sample), { total: 3, new: 1, saved: 1, dismissed: 1 });
+});
+
+test("assignClusters gives ties to the first item in a cluster", () => {
+  const out = assignClusters([
+    { id: "a", title: "Training of trainers in Herat", score: 40 },
+    { id: "b", title: "Training of Trainers (Herat)", score: 40 }
+  ]);
+  assert.deepEqual(out.map((i) => i.isClusterPrimary), [true, false]);
+});
+
+test("collectFacets counts keywords and sources of non-dismissed items, most common first", () => {
+  const facets = collectFacets([
+    ...sample,
+    { id: "4", status: "new", sourceDomain: "b.org", matchedKeywords: ["agile", "pmp"] }
+  ]);
+  assert.deepEqual(facets.keywords, [{ value: "pmp", count: 2 }, { value: "agile", count: 1 }]);
+  assert.deepEqual(facets.sources, [{ value: "b.org", count: 2 }, { value: "a.org", count: 1 }], "dismissed a.org item is not counted");
+  assert.deepEqual(collectFacets([]), { keywords: [], sources: [] });
 });

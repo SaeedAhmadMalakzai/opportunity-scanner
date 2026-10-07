@@ -1,6 +1,18 @@
 const DAY_MS = 86400000;
 const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11 };
 
+/** Month name or abbreviation -> 0-based month index, or undefined. */
+function monthIndex(name) {
+  return MONTHS[String(name).slice(0, 3).toLowerCase()];
+}
+
+/** Epoch ms for an ISO-ish string, or null when absent/unparseable. */
+function parseTime(value) {
+  if (!value) return null;
+  const t = Date.parse(String(value));
+  return Number.isNaN(t) ? null : t;
+}
+
 function iso(y, m, d) {
   if (!(y >= 2000 && y <= 2100) || !(m >= 0 && m <= 11) || !(d >= 1 && d <= 31)) return null;
   const dt = new Date(Date.UTC(y, m, d));
@@ -27,14 +39,10 @@ export function normalizeDate(value) {
   }
 
   m = raw.match(/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-\/]*([a-z]{3,9})[\s\-\/,]*(20\d{2})\b/i);
-  if (m && MONTHS[m[2].slice(0, 3).toLowerCase()] !== undefined) {
-    return iso(+m[3], MONTHS[m[2].slice(0, 3).toLowerCase()], +m[1]);
-  }
+  if (m && monthIndex(m[2]) !== undefined) return iso(+m[3], monthIndex(m[2]), +m[1]);
 
   m = raw.match(/\b([a-z]{3,9})[\s\-]*(\d{1,2})(?:st|nd|rd|th)?[\s,]*(20\d{2})\b/i);
-  if (m && MONTHS[m[1].slice(0, 3).toLowerCase()] !== undefined) {
-    return iso(+m[3], MONTHS[m[1].slice(0, 3).toLowerCase()], +m[2]);
-  }
+  if (m && monthIndex(m[1]) !== undefined) return iso(+m[3], monthIndex(m[1]), +m[2]);
 
   const parsed = Date.parse(raw);
   if (!Number.isNaN(parsed)) {
@@ -45,24 +53,18 @@ export function normalizeDate(value) {
 }
 
 export function isExpired(deadlineIso, now = Date.now()) {
-  if (!deadlineIso) return false;
-  const t = Date.parse(String(deadlineIso));
-  if (Number.isNaN(t)) return false;
-  return t + DAY_MS <= now; // deadline day itself still counts as open
+  const t = parseTime(deadlineIso);
+  return t !== null && t + DAY_MS <= now; // deadline day itself still counts as open
 }
 
 export function daysUntil(deadlineIso, now = Date.now()) {
-  if (!deadlineIso) return null;
-  const t = Date.parse(String(deadlineIso));
-  if (Number.isNaN(t)) return null;
-  return Math.ceil((t - now) / DAY_MS);
+  const t = parseTime(deadlineIso);
+  return t === null ? null : Math.ceil((t - now) / DAY_MS);
 }
 
-export function ageInDays(iso, now = Date.now()) {
-  if (!iso) return null;
-  const t = Date.parse(String(iso));
-  if (Number.isNaN(t)) return null;
-  return (now - t) / DAY_MS;
+export function ageInDays(value, now = Date.now()) {
+  const t = parseTime(value);
+  return t === null ? null : (now - t) / DAY_MS;
 }
 
 /* ── Solar Hijri (Jalali) support for Afghan government sites ── */
@@ -76,17 +78,20 @@ export function asciiDigits(text) {
 
 function div(a, b) { return Math.trunc(a / b); }
 
+/** Jalali leap-cycle break years (Borkowski / jalaali-js). */
+const JALALI_BREAKS = Object.freeze([-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178]);
+
 /** Jalali → Gregorian (algorithm by Kazimierz M. Borkowski, as used in jalaali-js). */
 export function jalaliToGregorian(jy, jm, jd) {
-  const breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
-  let gy = jy + 621;
+  const breaks = JALALI_BREAKS;
+  const gy = jy + 621;
   let leapJ = -14;
   let jp = breaks[0];
   for (let i = 1; i < breaks.length; i++) {
     const jm2 = breaks[i];
     const jump = jm2 - jp;
     if (jy < jm2) {
-      let n = jy - jp;
+      const n = jy - jp;
       leapJ += div(n, 33) * 8 + div(n % 33 + 3, 4);
       if (jump % 33 === 4 && jump - n === 4) leapJ += 1;
       break;
@@ -97,12 +102,11 @@ export function jalaliToGregorian(jy, jm, jd) {
   const leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150;
   const march = 20 + leapJ - leapG;
   const g2d = (y, m, d) => {
-    let r = div((y + div(m - 8, 6) + 100100) * 1461, 4) + div(153 * ((m + 9) % 12) + 2, 5) + d - 34840408;
-    r = r - div(div(y + 100100 + div(m - 8, 6), 100) * 3, 4) + 752;
-    return r;
+    const r = div((y + div(m - 8, 6) + 100100) * 1461, 4) + div(153 * ((m + 9) % 12) + 2, 5) + d - 34840408;
+    return r - div(div(y + 100100 + div(m - 8, 6), 100) * 3, 4) + 752;
   };
   const jdn = g2d(gy, 3, march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1;
-  let j = 4 * jdn + 139361631 + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+  const j = 4 * jdn + 139361631 + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
   const i = div(j % 1461, 4) * 5 + 308;
   const gd = div(i % 153, 5) + 1;
   const gm = (div(i, 153) % 12) + 1;

@@ -4,7 +4,7 @@
  * Usage: node tests/smoke/chrome-smoke.mjs [--no-scan]
  */
 import { spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -42,7 +42,7 @@ mkdirSync(OUT, { recursive: true });
 
 const userDir = mkdtempSync(join(tmpdir(), "os-smoke-"));
 const chrome = spawn(CHROME, [
-  `--remote-debugging-port=${PORT}`, "--headless=new", "--no-first-run", "--no-default-browser-check",
+  `--remote-debugging-port=${PORT}`, "--remote-debugging-address=127.0.0.1", "--headless=new", "--no-first-run", "--no-default-browser-check",
   `--user-data-dir=${userDir}`, `--load-extension=${EXT}`, `--disable-extensions-except=${EXT}`,
   "--window-size=1200,900", "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36", "about:blank"
 ], { stdio: ["ignore", "ignore", "pipe"] });
@@ -172,4 +172,6 @@ try {
   process.exitCode = 2;
 } finally {
   chrome.kill("SIGKILL");
+  // The throwaway profile holds everything the live scan stored; never leave it in /tmp.
+  try { rmSync(userDir, { recursive: true, force: true }); } catch { /* best effort */ }
 }

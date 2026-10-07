@@ -1,6 +1,8 @@
 import { splitBlocks, stripHtml, anchors, extractAfghanLocation } from "../html.js";
 import { normalizeDate } from "../dates.js";
 import { resolveHttpUrl } from "../urls.js";
+import { OPPORTUNITY_TYPES } from "../types.js";
+import { htmlConnector, TITLE_MAX, SUMMARY_MAX } from "./shared.js";
 
 const BASE = "https://www.acted.org/";
 const ITEM = /<div class="item item-rh">/g;
@@ -24,22 +26,20 @@ export function parseActedTenders(html) {
     const posted = normalizeDate(block.match(/<div class="float-right">\s*([\d\/.\-]+)\s*<\/div>/i)?.[1] || "");
     const location = locationFromTitle(title) || "";
     items.push({
-      title: title.slice(0, 200), organization: "ACTED", type: "tender",
+      title: title.slice(0, TITLE_MAX), organization: "ACTED", type: OPPORTUNITY_TYPES.TENDER,
       location, offTarget: Boolean(location) && !/afghanistan/i.test(location),
       deadline: null, postedDate: posted, url, sourceDomain: "acted.org",
-      summary: title.slice(0, 400), parserConfidence: 0.88, parserSource: "html:acted"
+      summary: title.slice(0, SUMMARY_MAX), parserConfidence: 0.88, parserSource: "html:acted"
     });
   }
   return items;
 }
 
 export const actedConnectors = {
-  "acted-tenders": {
+  "acted-tenders": htmlConnector({
     label: "ACTED — Calls for tenders (global)",
     description: "ACTED's international and national calls for tenders. Mostly outside Afghanistan; Afghan notices are boosted by geography scoring.",
     homepage: "https://www.acted.org/en/call-for-tenders/",
-    async fetchItems(ctx) {
-      return parseActedTenders(await ctx.fetchText("https://www.acted.org/en/call-for-tenders/"));
-    }
-  }
+    parse: parseActedTenders
+  })
 };

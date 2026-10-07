@@ -1,5 +1,10 @@
 import { stripHtml } from "../html.js";
 import { normalizeDate } from "../dates.js";
+import { OPPORTUNITY_TYPES, DEFAULT_LOCATION } from "../types.js";
+import { joinSummary, TITLE_MAX } from "./shared.js";
+
+const SUMMARY_MAX = 500;
+const BODY_EXCERPT_MAX = 300;
 
 const API = "https://api.reliefweb.int/v2";
 const AFGHANISTAN_COUNTRY_ID = 13;
@@ -18,24 +23,26 @@ export function buildReliefWebUrl(resource, appname, fields) {
 
 function names(list) { return (list || []).map((x) => x?.name).filter(Boolean).join(", "); }
 
+function bodyExcerpt(fields) { return stripHtml(fields["body-html"] || fields.body || "").slice(0, BODY_EXCERPT_MAX); }
+
 export function parseReliefWebJobs(json) {
   return (json?.data || []).map((d) => d.fields || {}).filter((f) => f.url && f.title).map((f) => ({
-    title: f.title.slice(0, 200), organization: names(f.source), type: "consultancy",
-    location: names(f.city) || "Afghanistan",
+    title: f.title.slice(0, TITLE_MAX), organization: names(f.source), type: OPPORTUNITY_TYPES.CONSULTANCY,
+    location: names(f.city) || DEFAULT_LOCATION,
     deadline: normalizeDate(f.date?.closing), postedDate: normalizeDate(f.date?.created),
     url: f.url, sourceDomain: "reliefweb.int",
-    summary: [names(f.type), names(f.career_categories), stripHtml(f["body-html"] || f.body || "").slice(0, 300)].filter(Boolean).join(" · ").slice(0, 500),
+    summary: joinSummary([names(f.type), names(f.career_categories), bodyExcerpt(f)], SUMMARY_MAX),
     parserConfidence: 0.95, parserSource: "api:reliefweb-jobs"
   }));
 }
 
 export function parseReliefWebTraining(json) {
   return (json?.data || []).map((d) => d.fields || {}).filter((f) => f.url && f.title).map((f) => ({
-    title: f.title.slice(0, 200), organization: names(f.source), type: "training",
-    location: names(f.city) || "Afghanistan",
+    title: f.title.slice(0, TITLE_MAX), organization: names(f.source), type: OPPORTUNITY_TYPES.TRAINING,
+    location: names(f.city) || DEFAULT_LOCATION,
     deadline: normalizeDate(f.date?.registration), postedDate: normalizeDate(f.date?.created),
     url: f.url, sourceDomain: "reliefweb.int",
-    summary: [names(f.training_type), names(f.format), f.date?.start && `Starts ${String(f.date.start).slice(0, 10)}`, stripHtml(f["body-html"] || f.body || "").slice(0, 300)].filter(Boolean).join(" · ").slice(0, 500),
+    summary: joinSummary([names(f.training_type), names(f.format), f.date?.start && `Starts ${String(f.date.start).slice(0, 10)}`, bodyExcerpt(f)], SUMMARY_MAX),
     parserConfidence: 0.95, parserSource: "api:reliefweb-training"
   }));
 }

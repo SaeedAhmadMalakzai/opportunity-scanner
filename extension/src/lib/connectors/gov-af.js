@@ -1,6 +1,8 @@
-import { splitBlocks, stripHtml, anchors, extractAfghanLocation } from "../html.js";
+import { allElements, anchors, extractAfghanLocation, innerOf, splitBlocks, stripHtml } from "../html.js";
 import { normalizeAnyDate } from "../dates.js";
 import { resolveHttpUrl } from "../urls.js";
+import { OPPORTUNITY_TYPES, DEFAULT_LOCATION } from "../types.js";
+import { joinSummary, TITLE_MAX, SUMMARY_MAX } from "./shared.js";
 
 /**
  * Afghan ministry websites share one Drupal theme ("cyberaan"): every notice is a bootstrap card with a
@@ -12,7 +14,7 @@ export function parseGovAfCards(html, { baseUrl, organization, sourceDomain, par
   const items = [];
   const seen = new Set();
   for (const block of splitBlocks(html, CARD)) {
-    const titleHtml = block.match(/<h2 class="card-title">([\s\S]*?)<\/h2>/i)?.[1];
+    const titleHtml = innerOf(block, /<h2 class="card-title">/i, "</h2>");
     if (!titleHtml) continue;
     const link = anchors(titleHtml)[0];
     if (!link) continue;
@@ -20,15 +22,15 @@ export function parseGovAfCards(html, { baseUrl, organization, sourceDomain, par
     const title = stripHtml(link.inner);
     if (!url || title.length < 4 || seen.has(url)) continue;
     seen.add(url);
-    const header = block.match(/class="d-flex card-date-blue">\s*<span>([\s\S]*?)<\/span>\s*<span[^>]*>([\s\S]*?)<\/span>/i);
-    const postedDate = normalizeAnyDate(stripHtml(header?.[1] || ""));
-    const place = stripHtml(header?.[2] || "");
-    const teaser = stripHtml(block.match(/<p class="card-text">([\s\S]*?)<\/div>/i)?.[1] || "");
+    const headerSpans = allElements(innerOf(block, /class="d-flex card-date-blue">/i, "</div>"), /<span[^<>]*>/gi, "</span>");
+    const postedDate = normalizeAnyDate(stripHtml(headerSpans[0]?.inner || ""));
+    const place = stripHtml(headerSpans[1]?.inner || "");
+    const teaser = stripHtml(innerOf(block, /<p class="card-text">/i, "</div>"));
     items.push({
-      title: title.slice(0, 200), organization, type: "tender",
-      location: place || extractAfghanLocation(`${title} ${teaser}`) || "Afghanistan",
+      title: title.slice(0, TITLE_MAX), organization, type: OPPORTUNITY_TYPES.TENDER,
+      location: place || extractAfghanLocation(`${title} ${teaser}`) || DEFAULT_LOCATION,
       deadline: null, postedDate, url, sourceDomain,
-      summary: [organization, teaser || title].filter(Boolean).join(" · ").slice(0, 400),
+      summary: joinSummary([organization, teaser || title], SUMMARY_MAX),
       parserConfidence: 0.86, parserSource
     });
   }

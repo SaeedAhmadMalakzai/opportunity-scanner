@@ -1,6 +1,7 @@
 import { daysUntil } from "../lib/dates.js";
 
-const RTL = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+/** Hebrew, Arabic (incl. Persian/Pashto) and Arabic presentation-form ranges. */
+const RTL = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
 export function isRtl(text) { return RTL.test(String(text || "").slice(0, 40)); }
 
@@ -51,3 +52,8 @@ export function fmtElapsed(ms) {
 }
 
 export function plural(n, word) { return `${n} ${word}${n === 1 ? "" : "s"}`; }
+
+/** Milliseconds as seconds with one decimal, e.g. 1530 -> "1.5s". */
+export function fmtSeconds(ms) {
+  return `${(Math.max(0, Number(ms) || 0) / 1000).toFixed(1)}s`;
+}

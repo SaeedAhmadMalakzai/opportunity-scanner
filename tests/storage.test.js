@@ -28,6 +28,12 @@ test("migrateSettings keeps a current-version user's disabled sources disabled",
   assert.equal(changed, false);
 });
 
+test("getSettings survives a corrupted enabledSources value", async () => {
+  await chrome.storage.local.set({ [storage.KEYS.SETTINGS]: { ...DEFAULT_SETTINGS, enabledSources: "acbar-rfp" } });
+  const s = await storage.getSettings();
+  assert.deepEqual(s.enabledSources, DEFAULT_SETTINGS.enabledSources);
+});
+
 test("getSettings persists the migrated settings once", async () => {
   await chrome.storage.local.set({ [storage.KEYS.SETTINGS]: { settingsVersion: 1, enabledSources: ["tendersontime-af"] } });
   const s = await storage.getSettings();
@@ -54,6 +60,15 @@ test("setItemStatus returns the previous status and validates input", async () =
   assert.equal(await storage.setItemStatus("a", "dismissed"), "new");
   assert.equal(await storage.setItemStatus("missing", "saved"), null);
   await assert.rejects(storage.setItemStatus("a", "bogus"), /Invalid status/);
+});
+
+test("isValidStatus accepts only the three item statuses; restoreStatuses skips invalid ones", async () => {
+  assert.equal(storage.isValidStatus("saved"), true);
+  assert.equal(storage.isValidStatus("archived"), false);
+  assert.equal(storage.isValidStatus(undefined), false);
+  await storage.upsertOpportunities([{ id: "a", title: "A" }]);
+  await storage.restoreStatuses({ a: "archived", ghost: "saved" });
+  assert.equal((await storage.getOpportunitiesMap()).a.status, "new");
 });
 
 test("bulkUpdateStatus and restoreStatuses round-trip (undo)", async () => {
@@ -98,4 +113,17 @@ test("clearAllData removes everything but settings", async () => {
   await storage.clearAllData();
   assert.deepEqual(await storage.getOpportunitiesMap(), {});
   assert.equal((await storage.getSettings()).minScore, 33);
+});
+
+test("prototype-named ids are not treated as existing records", async () => {
+  await storage.upsertOpportunities([{ id: "a", title: "A" }]);
+  assert.equal(await storage.setItemStatus("__proto__", "saved"), null);
+  assert.equal(await storage.setItemStatus("constructor", "saved"), null);
+  await storage.updateOpportunityNote("__proto__", "x");
+  const previous = await storage.bulkUpdateStatus(["__proto__", "a"], "dismissed");
+  assert.deepEqual(previous, { a: "new" });
+  await storage.restoreStatuses({ __proto__: "saved", a: "new" });
+  const map = await storage.getOpportunitiesMap();
+  assert.deepEqual(Object.keys(map), ["a"]);
+  assert.equal(map.a.status, "new");
 });

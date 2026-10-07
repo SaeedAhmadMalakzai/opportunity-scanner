@@ -1,5 +1,7 @@
-import { DEFAULT_SETTINGS, ITEM_STATUS, SETTINGS_VERSION, LIMITS } from "./types.js";
-import { RETIRED_CONNECTOR_IDS, CONNECTORS } from "./connectors/index.js";
+import { ITEM_STATUS, SETTINGS_VERSION, LIMITS } from "./types.js";
+import { migrateSettings } from "./settings.js";
+
+export { migrateSettings };
 
 export const KEYS = Object.freeze({
   SETTINGS: "os_settings",
@@ -12,29 +14,12 @@ export const KEYS = Object.freeze({
 function getLocal(keys) { return chrome.storage.local.get(keys); }
 function setLocal(data) { return chrome.storage.local.set(data); }
 
-/* In-memory cache of the (potentially multi-MB) opportunities map. Service workers restart often,
-   so this is a best-effort accelerator for popup interactions, invalidated on every write. */
+/* In-memory cache of the (potentially multi-MB) opportunities map. Only the service worker writes
+   os_opportunities, so the cache is kept in step with its own writes; it is dropped on worker boot
+   and by clearAllData. Service workers restart often, so this is a best-effort accelerator. */
 let oppCache = null;
 
 /* ── Settings ── */
-
-export function migrateSettings(stored) {
-  const merged = { ...DEFAULT_SETTINGS, ...(stored || {}) };
-  const storedVersion = Number(stored?.settingsVersion || 0);
-  let changed = storedVersion !== SETTINGS_VERSION;
-  const known = new Set(Object.keys(CONNECTORS));
-  const retired = new Set(RETIRED_CONNECTOR_IDS);
-  let enabled = (merged.enabledSources || []).filter((id) => known.has(id) && !retired.has(id));
-  if (storedVersion < SETTINGS_VERSION) {
-    // New release: enable every default source the user has never seen so new connectors are not silently off.
-    const previouslyKnown = new Set((stored?.enabledSources || []).filter((id) => known.has(id)));
-    for (const id of DEFAULT_SETTINGS.enabledSources) if (!previouslyKnown.has(id) && !enabled.includes(id)) enabled.push(id);
-    changed = true;
-  }
-  if (!enabled.length) enabled = [...DEFAULT_SETTINGS.enabledSources];
-  if (enabled.length !== (merged.enabledSources || []).length) changed = true;
-  return { settings: { ...merged, enabledSources: enabled, settingsVersion: SETTINGS_VERSION }, changed };
-}
 
 export async function getSettings() {
   const data = await getLocal([KEYS.SETTINGS]);
@@ -101,15 +86,21 @@ export async function upsertOpportunities(items) {
   await writeOpportunities(mergeOpportunities(current, items));
 }
 
+const VALID_STATUSES = new Set(Object.values(ITEM_STATUS));
+
+export function isValidStatus(status) {
+  return VALID_STATUSES.has(status);
+}
+
 function assertStatus(status) {
-  if (!Object.values(ITEM_STATUS).includes(status)) throw new Error("Invalid status.");
+  if (!isValidStatus(status)) throw new Error("Invalid status.");
 }
 
 /** Set one item's status; returns the previous status (for undo) or null when the id is unknown. */
 export async function setItemStatus(id, status) {
   assertStatus(status);
   const current = await getOpportunitiesMap();
-  const item = current[id];
+  const item = Object.hasOwn(current, id) ? current[id] : null;
   if (!item) return null;
   await writeOpportunities({ ...current, [id]: { ...item, status, lastUpdatedAt: new Date().toISOString() } });
   return item.status;
@@ -117,7 +108,7 @@ export async function setItemStatus(id, status) {
 
 export async function updateOpportunityNote(id, notes) {
   const current = await getOpportunitiesMap();
-  const item = current[id];
+  const item = Object.hasOwn(current, id) ? current[id] : null;
   if (!item) return;
   await writeOpportunities({ ...current, [id]: { ...item, notes: String(notes || "").slice(0, LIMITS.MAX_NOTE_LENGTH), lastUpdatedAt: new Date().toISOString() } });
 }
@@ -130,7 +121,7 @@ export async function bulkUpdateStatus(ids, status) {
   const previous = {};
   const next = { ...current };
   for (const id of ids || []) {
-    if (!current[id]) continue;
+    if (!Object.hasOwn(current, id)) continue;
     previous[id] = current[id].status;
     next[id] = { ...current[id], status, lastUpdatedAt: now };
   }
@@ -138,13 +129,13 @@ export async function bulkUpdateStatus(ids, status) {
   return previous;
 }
 
-/** Restore a map of { id: status } (undo helper). */
+/** Restore a map of { id: status } (undo helper); unknown ids and invalid statuses are skipped. */
 export async function restoreStatuses(previous) {
   const current = await getOpportunitiesMap();
   const now = new Date().toISOString();
   const next = { ...current };
   for (const [id, status] of Object.entries(previous || {})) {
-    if (!current[id] || !Object.values(ITEM_STATUS).includes(status)) continue;
+    if (!Object.hasOwn(current, id) || !isValidStatus(status)) continue;
     next[id] = { ...current[id], status, lastUpdatedAt: now };
   }
   await writeOpportunities(next);

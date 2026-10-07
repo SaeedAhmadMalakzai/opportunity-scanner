@@ -1,19 +1,31 @@
+const DEFAULT_TOAST_MS = 6000;
+
 const toast = document.getElementById("toast");
 const toastText = document.getElementById("toastText");
 const toastAction = document.getElementById("toastAction");
 let hideTimer = null;
-let currentAction = null;
+let current = { action: null, onError: null };
 
 toastAction.addEventListener("click", async () => {
-  const fn = currentAction;
+  const { action, onError } = current;
   hideToast();
-  if (fn) await fn();
+  if (!action) return;
+  try {
+    await action();
+  } catch (e) {
+    onError?.(e);
+  }
 });
 
-export function showToast(text, { actionLabel, onAction, duration = 6000 } = {}) {
+/**
+ * @param {string} text
+ * @param {{ actionLabel?: string, onAction?: () => Promise<void>|void, onError?: (e: Error) => void, duration?: number }} [options]
+ *   onError receives any failure of onAction (e.g. a failed undo).
+ */
+export function showToast(text, { actionLabel, onAction, onError, duration = DEFAULT_TOAST_MS } = {}) {
   clearTimeout(hideTimer);
   toastText.textContent = text;
-  currentAction = onAction || null;
+  current = { action: onAction || null, onError: onError || null };
   toastAction.hidden = !onAction;
   toastAction.textContent = actionLabel || "Undo";
   toast.hidden = false;
@@ -23,5 +35,5 @@ export function showToast(text, { actionLabel, onAction, duration = 6000 } = {})
 export function hideToast() {
   clearTimeout(hideTimer);
   toast.hidden = true;
-  currentAction = null;
+  current = { action: null, onError: null };
 }

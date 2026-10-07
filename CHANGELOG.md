@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.4.0 — 2026-10-07
+
+Dual-model re-audit: Fable 5.1 for security, Opus 5.5 for code quality. Both reports were read-only; fixes were then applied and verified (136 unit tests, live smoke clean).
+
+### Security (Fable 5.1 audit)
+- **High — regex denial of service.** Every HTML parser used lazy `[\s\S]*?` spans and `[^>]` attribute runs, which are quadratic or cubic on pages full of openers with no closers. Measured: a 100 KB hostile page froze the service worker for minutes and would have re-frozen it every scheduled scan. All parsing now runs in linear time: opening tags are matched with `[^<>]`-bounded regexes and closing tags are found with `indexOf` (new `allElements`, `innerOf`, `stripBetween`, `attrValue` helpers in `lib/html.js`). Regression tests parse 300 KB of hostile input per parser under a time budget.
+- **Medium — storage quota exhaustion.** Scraped fields were persisted verbatim; one page with a multi-megabyte title could exceed the 10 MB quota and make every scan fail. Every item is now allow-listed and capped (`normalizeRawItem`) before scoring, and each source is capped at 500 items per scan.
+- **Medium — private-host guard bypass over IPv6.** `[::ffff:127.0.0.1]`, `[::]`, NAT64 and 6to4 forms of loopback and RFC1918 addresses passed `isSafeHttpsUrl`. IPv6 literals are now expanded and classified; `.internal`, `.lan` and `.home.arpa` names are also blocked.
+- Low: prototype-named ids and sort keys no longer resolve through inherited properties; the two credentialed UNGM requests refuse redirects; notification text is stripped of control characters, the organisation is capped, and notices from user-added sources are prefixed "(your source)"; unused `projects.worldbank.org` host permission removed; optional site permissions are revoked when their custom URLs are deleted; the smoke harness binds DevTools to loopback explicitly and deletes its temporary profile; privacy policy now describes UNGM cookie use and redirect handling accurately.
+
+### Code quality (Opus 5.5 audit and refactor)
+- Fixed: a dismissed or saved card could reappear when it was the last one visible, and hidden items could be selected by select-all; two near-simultaneous Scan requests both started a scan; several swallowed errors and unhandled rejections; keyword/source filters silently showing "All" while still applied; Enter on a focused button also opening the focused notice; settings accepted unvalidated at the service-worker boundary.
+- Structure: popup split into focused modules (state, filters, scan UI, keyboard, banner, item actions, card view model) with `popup.js` at 134 lines; service worker split into `beginScan` / `collectRawItems` / `scoreAndPersist` / `finalizeScan` with network code in `background/network.js`; shared `ui/` modules for messaging, theme and formatting; `lib/settings.js` for validation and migration; `lib/pool.js`; connector helpers in `connectors/shared.js`; named constants throughout; no function over 50 lines.
+- Tests: 76 → 136, including popup state, keyboard, settings validation, progress, card view model, manifest consistency, concurrency, stop, notification failure, size cap and alarm behaviour.
+
 ## 4.3.0 — 2026-10-07
 
 ### Redesign: "Swiss data-desk"

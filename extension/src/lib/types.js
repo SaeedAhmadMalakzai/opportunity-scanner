@@ -21,7 +21,6 @@ export const MSG = Object.freeze({
   STOP_SCAN: "STOP_SCAN",
   TEST_SOURCE: "TEST_SOURCE",
   GET_DASHBOARD: "GET_DASHBOARD",
-  GET_RESULTS: "GET_RESULTS",
   GET_CONNECTORS: "GET_CONNECTORS",
   GET_SCAN_STATE: "GET_SCAN_STATE",
   GET_SOURCE_HEALTH: "GET_SOURCE_HEALTH",
@@ -46,6 +45,17 @@ export const SCAN_PHASES = Object.freeze({
   FAILED: "failed"
 });
 
+/** Location assumed when a source does not state one (every built-in source is Afghanistan-focused). */
+export const DEFAULT_LOCATION = "Afghanistan";
+
+/** chrome.storage.local keys owned by the popup/options pages (the service worker never reads them). */
+export const PREF_KEYS = Object.freeze({
+  THEME: "os_theme",
+  DENSITY: "os_density",
+  ONBOARDED: "os_onboarded",
+  FILTERS: "os_filters"
+});
+
 export const LIMITS = Object.freeze({
   MAX_OPPORTUNITIES: 2500,
   SEEN_TTL_MS: 90 * 24 * 60 * 60 * 1000,
@@ -53,7 +63,8 @@ export const LIMITS = Object.freeze({
   MAX_RESPONSE_BYTES: 3 * 1024 * 1024,
   MIN_SCAN_INTERVAL_MINUTES: 60,
   KEEPALIVE_INTERVAL_MS: 20000,
-  MAX_NOTIFICATIONS_PER_SCAN: 5
+  MAX_NOTIFICATIONS_PER_SCAN: 5,
+  MAX_ITEMS_PER_SOURCE: 500
 });
 
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -79,4 +90,13 @@ export const DEFAULT_SETTINGS = Object.freeze({
   manualLinks: [],
   reliefwebAppName: "",
   notificationsEnabled: true
+});
+
+/** Inclusive bounds for numeric settings; enforced at the service-worker boundary (see settings.js). */
+export const SETTINGS_BOUNDS = Object.freeze({
+  minScore: Object.freeze({ min: 0, max: 100 }),
+  highPriorityThreshold: Object.freeze({ min: 50, max: 100 }),
+  scanIntervalHours: Object.freeze({ min: 1, max: 48 }),
+  fetchTimeoutMs: Object.freeze({ min: 5000, max: 60000 }),
+  maxConcurrentFetches: Object.freeze({ min: 1, max: 8 })
 });

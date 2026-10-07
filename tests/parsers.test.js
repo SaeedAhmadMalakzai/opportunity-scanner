@@ -10,11 +10,12 @@ test("parseHtmlListingPage resolves relative links, skips nav noise and dedupes"
     <a href="/tenders/1">Request for quotation for training services in Kabul</a>
     <a href="https://other.org/x.png">Image link that is long enough to pass</a>
     <a href="http://insecure.org/t">Insecure listing that should be skipped entirely</a>`;
-  const items = parseHtmlListingPage(html, "https://npa.example.org/tenders", "npa.example.org", "tender");
+  const items = parseHtmlListingPage(html, "https://npa.example.org/tenders", { sourceType: "tender" });
   assert.equal(items.length, 1);
   assert.equal(items[0].url, "https://npa.example.org/tenders/1");
   assert.equal(items[0].location, "Kabul");
   assert.equal(items[0].type, "tender");
+  assert.equal(items[0].sourceDomain, "npa.example.org", "source domain derived from the page URL");
 });
 
 test("parseOpportunityPage extracts title, deadline, posted date and org", () => {

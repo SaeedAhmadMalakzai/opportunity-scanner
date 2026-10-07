@@ -117,6 +117,14 @@ extension/
 tests/                               unit tests, fixtures (trimmed real pages), smoke harness
 ```
 
+## Security notes
+
+- Scraped pages are untrusted. All HTML parsing is linear-time (no lazy regex spans), every scraped field is allow-listed and capped before it is stored, each source is limited to 500 items per scan, and responses are capped at 3 MB with timeouts.
+- Only public `https://` hosts are fetched; IPv4 and IPv6 forms of loopback, link-local and private ranges are rejected before the request and again after any redirect. The two UNGM requests that carry cookies refuse redirects altogether.
+- Cards are built from a template with `textContent`; there is no `innerHTML` anywhere in the extension.
+- Settings are validated and clamped when the service worker receives them, not just in the form.
+- CSV cells that could be interpreted as formulas are neutralised.
+
 ## Privacy
 
 No analytics, no remote server, no cookies of its own. See [extension/PRIVACY_POLICY.md](extension/PRIVACY_POLICY.md).

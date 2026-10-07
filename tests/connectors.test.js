@@ -2,13 +2,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fixture, fixtureJson } from "./helpers/fixtures.js";
 import { parseAcbarCards } from "../extension/src/lib/connectors/acbar.js";
-import { parseUngmSearchResults, extractUngmToken, buildUngmSearchBody, ungmConnectors } from "../extension/src/lib/connectors/ungm.js";
+import { parseUngmSearchResults, extractUngmToken, buildUngmSearchBody, ungmConnectors, searchUngm } from "../extension/src/lib/connectors/ungm.js";
 import { parseWorldBankProjects, parseWorldBankProcurement } from "../extension/src/lib/connectors/worldbank.js";
 import { parseAfghanTenders } from "../extension/src/lib/connectors/afghantenders.js";
 import { parseActedTenders } from "../extension/src/lib/connectors/acted.js";
 import { parseActionAidListing } from "../extension/src/lib/connectors/actionaid.js";
 import { parseReliefWebJobs, parseReliefWebTraining, buildReliefWebUrl, reliefWebConnectors } from "../extension/src/lib/connectors/reliefweb.js";
 import { CONNECTORS, getConnectorCatalog, runConnector, runPool, fetchAllConnectorItems, RETIRED_CONNECTOR_IDS } from "../extension/src/lib/connectors/index.js";
+import { parseGovAfCards, govAfConnectors, GOV_AF_HOSTS } from "../extension/src/lib/connectors/gov-af.js";
+import { parseUnamaProcurement } from "../extension/src/lib/connectors/unama.js";
+import { parseUndpProjects } from "../extension/src/lib/connectors/undp.js";
+import { joinSummary, htmlConnector } from "../extension/src/lib/connectors/shared.js";
 import { DEFAULT_SETTINGS } from "../extension/src/lib/types.js";
 
 function assertItemShape(it) {
@@ -97,10 +101,7 @@ test("UNGM connector pages until a short page and de-duplicates across pages", a
       return idx < 2 ? fiveRows(String(idx + 1)) : "<div></div>";
     }
   };
-  const { ungmConnectors: c } = await import("../extension/src/lib/connectors/ungm.js");
-  const mod = await import("../extension/src/lib/connectors/ungm.js");
-  void c;
-  const items = await mod.searchUngmForTest(ctx, { pageSize: 5, maxPages: 5 });
+  const items = await searchUngm(ctx, { pageSize: 5, maxPages: 5 });
   assert.equal(posts, 3);
   assert.equal(items.length, 10);
 });
@@ -192,8 +193,22 @@ test("runConnector never throws and classifies empty/error/ok", async () => {
   const err = await runConnector("acbar-rfp", { settings: {}, log() {}, fetchText: async () => { throw new Error("HTTP 500"); } });
   assert.equal(err.health.status, "error");
   assert.equal(err.health.error, "HTTP 500");
+  assert.equal(err.health.isTimeout, false);
+  assert.ok(!("isTimeout" in ok.health), "only error records carry isTimeout");
+  const timeout = await runConnector("acbar-rfp", { settings: {}, log() {}, fetchText: async () => { throw Object.assign(new Error("Timed out after 25s"), { name: "AbortError" }); } });
+  assert.equal(timeout.health.error, "Timed out after 25s", "the detailed timeout message is kept");
+  assert.equal(timeout.health.isTimeout, true);
   const unknown = await runConnector("nope", { settings: {}, log() {} });
   assert.equal(unknown.health.status, "error");
+});
+
+test("joinSummary drops empty parts, joins and caps; htmlConnector fetches its page once", async () => {
+  assert.equal(joinSummary(["a", "", null, "b"], 10), "a · b");
+  assert.equal(joinSummary(["abc", "def"], 5, { sep: " — " }), "abc —");
+  const urls = [];
+  const c = htmlConnector({ label: "L", description: "D", homepage: "https://x.org/", parse: (html) => [html] });
+  assert.deepEqual(await c.fetchItems({ fetchText: async (u) => { urls.push(u); return "page"; } }), ["page"]);
+  assert.deepEqual(urls, ["https://x.org/"]);
 });
 
 test("runPool bounds concurrency and honours abort", async () => {
@@ -224,10 +239,6 @@ test("fetchAllConnectorItems runs enabled sources in parallel and reports health
   assert.equal(progress.at(-1).done, 2);
   assert.equal(progress.at(-1).total, 2);
 });
-
-import { parseGovAfCards, govAfConnectors, GOV_AF_HOSTS } from "../extension/src/lib/connectors/gov-af.js";
-import { parseUnamaProcurement } from "../extension/src/lib/connectors/unama.js";
-import { parseUndpProjects } from "../extension/src/lib/connectors/undp.js";
 
 test("Afghan ministry cards (English site) parse title, posted date, place and teaser", () => {
   const items = parseGovAfCards(fixture("govaf_mohia_en.html"), { baseUrl: "https://www.mohia.gov.af/en/all-tenders", organization: "MoHIA", sourceDomain: "mohia.gov.af", parserSource: "html:govaf-mohia" });
