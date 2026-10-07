@@ -2,3 +2,4 @@
 *.log
 Thumbs.db
 tests/smoke/out/
+*.zip
