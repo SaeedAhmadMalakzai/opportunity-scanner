@@ -110,7 +110,7 @@ try {
   // Opening an extension page wakes the MV3 service worker; then attach to it for console capture.
   const probe = await openPage(cdp, `chrome-extension://${extId}/src/popup/popup.html`, "probe");
   const probeText = await evaluate(cdp, probe.sessionId, `document.title + " | " + document.body.innerText.slice(0, 200)`);
-  if (!/Opportunity Scanner/.test(probeText)) throw new Error(`Extension did not load (id ${extId}): ${probeText}\n${stderr.slice(-2000)}`);
+  if (!/Find&Filter_Tenders-Afg/.test(probeText)) throw new Error(`Extension did not load (id ${extId}): ${probeText}\n${stderr.slice(-2000)}`);
   await cdp.send("Target.closeTarget", { targetId: probe.targetId });
   let sw = null;
   for (let i = 0; i < 20 && !sw; i++) {

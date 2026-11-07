@@ -1,6 +1,6 @@
 # Chrome Web Store listing copy
 
-Use the sections below when publishing **Opportunity Scanner** on the Chrome Web Store.
+Use the sections below when publishing **Find&Filter_Tenders-Afg** on the Chrome Web Store.
 
 ## Short description (132 characters max)
 
@@ -8,7 +8,7 @@ Tenders, RFPs, consultancies and trainings in Afghanistan from ACBAR, UNGM, Worl
 
 ## Detailed description
 
-Opportunity Scanner is a smart opportunity discovery tool built for consulting and development firms operating in Afghanistan.
+Find&Filter_Tenders-Afg is a smart opportunity discovery tool built for consulting and development firms operating in Afghanistan.
 
 **What it does:**
 - Scans ACBAR (RFPs, RFQs, jobs), the UN Global Marketplace (every UN agency), the World Bank procurement and projects APIs, Afghan Tenders, ACTED, ActionAid Afghanistan, UNAMA, UNDP, nine Afghan ministry tender boards and ReliefWeb

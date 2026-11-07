@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.4.1 — 2026-11-07
+
+Renamed from Opportunity Scanner to **Find&Filter_Tenders-Afg** (extension name, toolbar title, popup and settings headers, onboarding, README, privacy policy, store listing). No behaviour changes.
+
 ## 4.4.0 — 2026-10-07
 
 Dual-model re-audit: Fable 5.1 for security, Opus 5.5 for code quality. Both reports were read-only; fixes were then applied and verified (136 unit tests, live smoke clean).

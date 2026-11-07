@@ -1,4 +1,4 @@
-export const APP_NAME = "Opportunity Scanner";
+export const APP_NAME = "Find&Filter_Tenders-Afg";
 export const SETTINGS_VERSION = 14;
 
 export const OPPORTUNITY_TYPES = Object.freeze({

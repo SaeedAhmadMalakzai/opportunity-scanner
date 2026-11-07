@@ -1,4 +1,4 @@
-# Opportunity Scanner
+# Find&Filter_Tenders-Afg
 
 Chrome extension (Manifest V3) that finds tenders, RFPs, RFQs, consultancies, projects and trainings in Afghanistan, scores each notice against a consulting-services profile, and gives you a fast triage inbox. Everything runs and stays inside your browser.
 

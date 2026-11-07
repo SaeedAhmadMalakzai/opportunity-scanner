@@ -1,10 +1,10 @@
-# Privacy Policy for Opportunity Scanner
+# Privacy Policy for Find&Filter_Tenders-Afg
 
 **Last updated:** October 5, 2026
 
 ## Overview
 
-Opportunity Scanner is a Chrome extension that discovers publicly available tenders, projects, RFPs, RFQs, and training opportunities from UN agencies, ACBAR, World Bank, and other sources relevant to Afghanistan.
+Find&Filter_Tenders-Afg is a Chrome extension that discovers publicly available tenders, projects, RFPs, RFQs, and training opportunities from UN agencies, ACBAR, World Bank, and other sources relevant to Afghanistan.
 
 ## Data Collection
 
